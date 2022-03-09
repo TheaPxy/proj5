@@ -1,0 +1,82 @@
+rm -rf dataA
+rm -rf dataB
+mkdir dataA
+mkdir dataB
+echo ================================ upload empty base directory  ============================================================================
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataB 1024
+echo ================================ dataB/index.txt============================================================================
+cat dataB/index.txt
+echo "hhh" >> dataA/hhh.txt
+echo "nnn" >> dataB/nnn.txt
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataB 1024
+echo ================================ dataB/index.txt test case 10 ============================================================================
+cat dataB/index.txt
+echo ================================ dataB/nnn.txt ===============================================================================
+cat dataB/nnn.txt
+echo ================================ upload hhh.txt from dataA test case 10 and download nnn.txt testcase 11===================================
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataA 1024
+echo ================================ dataA/index.txt ===============================================================================
+cat dataA/index.txt
+echo ================================ dataA/hhh.txt ===============================================================================
+cat dataA/hhh.txt
+echo ================================ dataA/nnn.txt ===============================================================================
+cat dataA/nnn.txt
+diff dataB/nnn.txt dataA/nnn.txt
+echo ================================ modify nnn.txt ==============================================================================
+echo "nnn" >> dataA/nnn.txt
+echo ================================ upload dataA/nnn.txt test case 3 ==============================================================================
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataA 1024
+echo ================================ dataA/index.txt ===============================================================================
+cat dataA/index.txt
+echo ================================ dataA/nnn.txt  ===============================================================================
+cat dataA/nnn.txt
+echo ================================ sync nnn.txt=nnnnnn on dataB test case 4===============================================================
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataB 1024
+echo ================================ dataB/index.txt ===============================================================================
+cat dataB/index.txt
+echo ================================ dataB/nnn.txt ===============================================================================
+cat dataB/nnn.txt
+echo ================================ Repetitive call: sync nnn.txt=nnnnnn on dataB====================================================
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataB 1024
+echo ================================ dataB/index.txt ===============================================================================
+cat dataB/index.txt
+echo ================================ dataB/nnn.txt ===============================================================================
+cat dataB/nnn.txt
+echo ================================ modify dataB/nnn.txt and modify dataA/nnn.txt Test case 2  ==============================================================================
+echo "nnn" >> dataA/nnn.txt
+echo "nnnnnnnnnn" >> dataB/nnn.txt
+echo ================================ upload dataB/nnn.txt==============================================================================
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataB 1024
+echo ================================ upload dataA/nnn.txt fail and sync with dataB/nnn.txt ==============================================================================
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataA 1024
+diff dataB/nnn.txt dataA/nnn.txt
+echo ================================ dataB ===============================================================================
+cat dataB/nnn.txt
+cat dataB/index.txt
+echo ================================ dataA  ===============================================================================
+cat dataA/nnn.txt
+cat dataA/index.txt
+
+echo ==Test Case 8==
+rm -rf dataA/nnn.txt
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataA 1024
+cat dataA/index.txt
+
+echo ==Test Case 7==
+rm -rf dataB/nnn.txt
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataB 1024
+cat dataB/index.txt
+cat dataB/nnn.txt
+
+echo ==Test Case 9==
+echo "b" > dataB/bb.txt
+echo "bbbbbbbb" > dataA/bb.txt
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataA 1024
+go run cmd/SurfstoreClientExec/main.go -d localhost:8081 dataB 1024
+diff dataB/bb.txt dataA/bb.txt
+echo ==dataB==
+cat dataB/bb.txt
+cat dataB/index.txt
+echo ==dataA==
+cat dataA/bb.txt
+cat dataA/index.txt
