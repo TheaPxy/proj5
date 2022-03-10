@@ -346,12 +346,11 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 	}
 	s.isLeaderMutex.Unlock()
 
-	fmt.Printf("--SendHeartBeat-- Server Id: %d term: %d \n", s.serverId, s.term)
 	for idx, addr := range s.ipList {
 		if int64(idx) == s.serverId {
 			continue
 		}
-
+		fmt.Printf("--SendHeartBeat-- Server Id: %d, Receiver Id: %d, term: %d \n", s.serverId, addr, s.term)
 		conn, err := grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
 			return nil, nil
@@ -399,6 +398,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 }
 
 func (s *RaftSurfstore) Crash(ctx context.Context, _ *emptypb.Empty) (*Success, error) {
+	fmt.Printf("server %d Crash\n", s.serverId)
 	s.isCrashedMutex.Lock()
 	s.isCrashed = true
 	s.isCrashedMutex.Unlock()
@@ -407,6 +407,7 @@ func (s *RaftSurfstore) Crash(ctx context.Context, _ *emptypb.Empty) (*Success, 
 }
 
 func (s *RaftSurfstore) Restore(ctx context.Context, _ *emptypb.Empty) (*Success, error) {
+	fmt.Printf("server %d Restore\n", s.serverId)
 	s.isCrashedMutex.Lock()
 	s.isCrashed = false
 	s.notCrashedCond.Broadcast()
