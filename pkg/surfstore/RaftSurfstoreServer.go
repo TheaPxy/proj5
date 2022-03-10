@@ -198,6 +198,9 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 
 		// if s.log is not empty
 		//s.nextIndexMapMutex.Lock()
+		//todo CorrectLog: check input.entries
+		fmt.Println("--Leader's Log-- ", s.ip, " ", s.log)
+		fmt.Println("--AppendFollowerEntry-- NextIndex ", s.nextIndex)
 		if s.nextIndex[addr] >= 1 {
 
 			input.PrevLogTerm = s.log[s.nextIndex[addr]-1].Term
@@ -208,7 +211,6 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 
 		//s.nextIndexMapMutex.Lock()
 		if s.nextIndex[addr] < int64(len(s.log)) {
-
 			input.Entries = s.log[s.nextIndex[addr]:]
 		}
 		//s.nextIndexMapMutex.Unlock()
@@ -266,7 +268,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		return nil, ERR_SERVER_CRASHED
 	}
 	s.isCrashedMutex.Unlock()
-
+	fmt.Println("--AppendEntries-- --Follower input.entry-- ", input.Entries)
 	output := &AppendEntryOutput{
 		ServerId: s.serverId,
 		Term:     s.term,
