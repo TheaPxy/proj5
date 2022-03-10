@@ -20,7 +20,7 @@ type RaftSurfstore struct {
 
 	commitIndex    int64
 	pendingCommits []chan bool
-
+	//nextIndex      sync.Map
 	nextIndex map[string]int64
 
 	lastApplied int64
@@ -33,6 +33,9 @@ type RaftSurfstore struct {
 	//leader protection
 	isLeaderMutex sync.RWMutex
 	isLeaderCond  *sync.Cond
+
+	nextIndexMapMutex sync.RWMutex
+	nextIndexMapCond  *sync.Cond
 
 	rpcClients []RaftSurfstoreClient
 
@@ -191,13 +194,21 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 		}
 
 		// if s.log is not empty
+		//s.nextIndexMapMutex.Lock()
 		if s.nextIndex[addr] >= 1 {
+
 			input.PrevLogTerm = s.log[s.nextIndex[addr]-1].Term
 			input.PrevLogIndex = s.nextIndex[addr] - 1
+			//s.nextIndexMapMutex.Unlock()
 		}
+		//s.nextIndexMapMutex.Unlock()
+
+		//s.nextIndexMapMutex.Lock()
 		if s.nextIndex[addr] < int64(len(s.log)) {
+
 			input.Entries = s.log[s.nextIndex[addr]:]
 		}
+		//s.nextIndexMapMutex.Unlock()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
@@ -206,7 +217,9 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 			// todo update nextIndex for followers ???????????
 			// rule 4, rule 5
 			// s.term = output.Term
+			//s.nextIndexMapMutex.Lock()
 			s.nextIndex[addr] += int64(len(input.Entries))
+			//s.nextIndexMapMutex.Unlock()
 			ok <- true
 			return
 		} else {
@@ -220,7 +233,9 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 				return
 			} else {
 				// violate rule 2|| violate rule 3
+				//s.nextIndexMapMutex.Lock()
 				s.nextIndex[addr]--
+				//s.nextIndexMapMutex.Unlock()
 			}
 		}
 	}
@@ -321,7 +336,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 	}
 	s.isLeaderMutex.Unlock()
 
-	fmt.Printf("Server Id: %d term: %d \n", s.serverId, s.term)
+	fmt.Printf("--SendHeartBeat-- Server Id: %d term: %d \n", s.serverId, s.term)
 	for idx, addr := range s.ipList {
 		if int64(idx) == s.serverId {
 			continue
@@ -335,10 +350,8 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 
 		//fmt.Println("sendHeartBeat nextIndex: ", s.nextIndex[addr], " addr: ", addr)
 		input := &AppendEntryInput{
-			Term: s.term,
-			//PrevLogTerm: s.log[s.nextIndex[idx]-1].Term,
-			PrevLogTerm: 0,
-			//PrevLogIndex: s.nextIndex[idx] - 1,
+			Term:         s.term,
+			PrevLogTerm:  0,
 			PrevLogIndex: -1,
 			Entries:      make([]*UpdateOperation, 0),
 			LeaderCommit: s.commitIndex,
@@ -357,7 +370,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
 
-		fmt.Println("output: ", output, " s term: ", s.term)
+		fmt.Println("--SendHeartBeat-- AppendEntries output: ", output, " s term: ", s.term)
 		if output != nil && !output.Success && output.Term > s.term {
 			s.isLeaderMutex.Lock()
 			s.isLeader = false
@@ -413,12 +426,10 @@ func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty
 		}
 		client := NewRaftSurfstoreClient(conn)
 
-		// TODO create correct AppendEntryInput from s.nextIndex, etc
 		input := &AppendEntryInput{
 			Term:         s.term,
 			PrevLogTerm:  -1,
 			PrevLogIndex: -1,
-			// TODO figure out which entries to send
 			Entries:      make([]*UpdateOperation, 0),
 			LeaderCommit: s.commitIndex,
 		}
