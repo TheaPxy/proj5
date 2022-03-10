@@ -212,7 +212,11 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		output, _ := client.AppendEntries(ctx, input)
+		output, err := client.AppendEntries(ctx, input)
+		fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
+		if err != nil {
+			continue
+		}
 		if output.Success {
 			// todo update nextIndex for followers ???????????
 			// rule 4, rule 5
