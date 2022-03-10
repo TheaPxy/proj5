@@ -302,7 +302,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		entry := s.log[s.lastApplied]
 		s.metaStore.UpdateFile(ctx, entry.FileMetaData)
 	}
-	//fmt.Println("--AppendEntries-- addr ", s.ip, " log ", s.log)
+	fmt.Println("--AppendEntries-- addr ", s.ip, " log ", s.log)
 	output.Success = true
 	return output, nil
 }
