@@ -132,6 +132,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		Term:         s.term,
 		FileMetaData: filemeta,
 	}
+	//todo find the right place to update s.log
 	s.log = append(s.log, &op)
 	//committed := make(chan bool)
 	//s.pendingCommits = append(s.pendingCommits, committed)
@@ -158,6 +159,8 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		if count > len(s.ipList)/2 {
 			// majority of nodes are alive
 			// change leader's commit index
+			//todo change state machine????
+			//todo how much commitIndex incre?
 			s.commitIndex++
 			break
 		}
@@ -283,6 +286,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	// input.PrevLogIndex < len(s.log) && (< 0 || term ==)
 	//todo: how to deal with match situation
 	s.term = input.Term
+	// todo ?????
 	output.Term = s.term
 
 	// rule 4
@@ -298,7 +302,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		entry := s.log[s.lastApplied]
 		s.metaStore.UpdateFile(ctx, entry.FileMetaData)
 	}
-	fmt.Println("--AppendEntries-- addr ", s.ip, " log ", s.log)
+	//fmt.Println("--AppendEntries-- addr ", s.ip, " log ", s.log)
 	output.Success = true
 	return output, nil
 }
@@ -320,7 +324,7 @@ func (s *RaftSurfstore) SetLeader(ctx context.Context, _ *emptypb.Empty) (*Succe
 	s.isLeaderMutex.Lock()
 	s.isLeader = true
 	s.isLeaderMutex.Unlock()
-	//todo set all others isleader to false
+	fmt.Println("--set leader-- ", s.ip, " is leader now")
 	return &Success{Flag: true}, nil
 }
 
