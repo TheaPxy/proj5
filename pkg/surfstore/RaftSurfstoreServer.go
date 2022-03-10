@@ -199,8 +199,8 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 		// if s.log is not empty
 		//s.nextIndexMapMutex.Lock()
 		//todo CorrectLog: check input.entries
-		fmt.Println("--Leader's Log-- ", s.ip, " ", s.log)
-		fmt.Println("--AppendFollowerEntry-- NextIndex ", s.nextIndex)
+		fmt.Println("--AppendFollowerEntry--Leader's Log-- ", s.ip, " ", s.log)
+		fmt.Println("--AppendFollowerEntry--AppendFollowerEntry-- NextIndex ", s.nextIndex)
 		if s.nextIndex[addr] >= 1 {
 			input.PrevLogTerm = s.log[s.nextIndex[addr]-1].Term
 			input.PrevLogIndex = s.nextIndex[addr] - 1
@@ -379,6 +379,9 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			input.Entries = s.log[s.nextIndex[addr]:]
 		}
 
+		fmt.Println("--SendHeartBeat--Leader's Log-- ", s.ip, " ", s.log)
+		fmt.Println("--SendHeartBeat--AppendFollowerEntry-- NextIndex ", s.nextIndex)
+		fmt.Println("--AppendEntries--", s.ip, " --Follower input.entry-- ", input.Entries)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
