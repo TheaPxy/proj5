@@ -202,7 +202,6 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 		fmt.Println("--Leader's Log-- ", s.ip, " ", s.log)
 		fmt.Println("--AppendFollowerEntry-- NextIndex ", s.nextIndex)
 		if s.nextIndex[addr] >= 1 {
-
 			input.PrevLogTerm = s.log[s.nextIndex[addr]-1].Term
 			input.PrevLogIndex = s.nextIndex[addr] - 1
 			//s.nextIndexMapMutex.Unlock()
@@ -218,8 +217,9 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
-		//fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
+		// todo: error location
 		if err != nil {
+			fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
 			continue
 		}
 		if output.Success {
@@ -234,6 +234,7 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 		} else {
 			// failed cases, desc nextIndex based on output
 			// violate rule 1:
+			fmt.Println("--AppendFollowerEntry--", s.ip, " output fail")
 			if output.Term > s.term {
 				s.isLeaderMutex.Lock()
 				s.isLeader = false
@@ -248,6 +249,7 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 				//s.nextIndexMapMutex.Unlock()
 			}
 		}
+
 	}
 }
 
