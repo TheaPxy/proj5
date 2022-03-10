@@ -270,7 +270,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		return nil, ERR_SERVER_CRASHED
 	}
 	s.isCrashedMutex.Unlock()
-	fmt.Println("--AppendEntries-- --Follower input.entry-- ", input.Entries)
+	fmt.Println("--AppendEntries--", s.ip, " --Follower input.entry-- ", input.Entries)
 	output := &AppendEntryOutput{
 		ServerId: s.serverId,
 		Term:     s.term,
@@ -306,7 +306,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		entry := s.log[s.lastApplied]
 		s.metaStore.UpdateFile(ctx, entry.FileMetaData)
 	}
-	fmt.Println("--AppendEntries-- addr ", s.ip, " log ", s.log)
+	fmt.Println("--AppendEntries-- ", s.ip, " log ", s.log)
 	output.Success = true
 	return output, nil
 }
@@ -388,6 +388,9 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			s.isLeaderMutex.Lock()
 			s.isLeader = false
 			s.isLeaderMutex.Unlock()
+		}
+		if output != nil && output.Success {
+			s.nextIndex[addr] += int64(len(input.Entries))
 		}
 	}
 
