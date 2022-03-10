@@ -213,7 +213,7 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
-		fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
+		//fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
 		if err != nil {
 			continue
 		}
@@ -239,6 +239,7 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 				// violate rule 2|| violate rule 3
 				//s.nextIndexMapMutex.Lock()
 				s.nextIndex[addr]--
+				fmt.Println("--AppendFollowerEntry-- violate rule 2,3 addr: ", addr, " nextIndex: ", s.nextIndex[addr])
 				//s.nextIndexMapMutex.Unlock()
 			}
 		}
@@ -297,7 +298,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		entry := s.log[s.lastApplied]
 		s.metaStore.UpdateFile(ctx, entry.FileMetaData)
 	}
-
+	fmt.Println("--AppendEntries-- addr ", s.ip, " log ", s.log)
 	output.Success = true
 	return output, nil
 }
