@@ -261,7 +261,6 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 //4. Append any new entries not already in the log
 //5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index
 //of last new entry)
-
 func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInput) (*AppendEntryOutput, error) {
 
 	s.isCrashedMutex.Lock()
@@ -288,9 +287,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	}
 
 	// input.PrevLogIndex < len(s.log) && (< 0 || term ==)
-	//todo: how to deal with match situation
 	s.term = input.Term
-	// todo ?????
 	output.Term = s.term
 
 	// rule 4
@@ -380,8 +377,8 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 		}
 
 		fmt.Println("--SendHeartBeat--Leader's Log-- ", s.ip, " ", s.log)
-		fmt.Println("--SendHeartBeat--AppendFollowerEntry-- NextIndex ", s.nextIndex)
-		fmt.Println("--AppendEntries--", s.ip, " --Follower input.entry-- ", input.Entries)
+		fmt.Println("--SendHeartBeat-- NextIndex ", s.nextIndex)
+		fmt.Println("--SendHeartBeat--", s.ip, " --Follower input.entry-- ", input.Entries)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
