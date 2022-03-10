@@ -101,13 +101,16 @@ func ClientSync(client RPCClient) {
 			// case 1
 			// upload new file, most base case
 			if err1 := upload(client, int32(0), filename, baseDirFileInfoMap, baseDirFileBlockMap, localIndexMetaMap); err1 != nil {
-				var VersionErr = errors.New("wrong version metastore")
-				if errors.Is(err1, VersionErr) {
-					if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
-						log.Fatalf("Download %v failed: %s", filename, e)
-					}
-				} else {
-					log.Fatalf("Upload failed: %s", err1)
+				//var VersionErr = errors.New("wrong version metastore")
+				//if errors.Is(err1, VersionErr) {
+				//	if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
+				//		log.Fatalf("Download %v failed: %s", filename, e)
+				//	}
+				//} else {
+				//	log.Fatalf("Upload failed: %s", err1)
+				//}
+				if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
+					log.Fatalf("Download %v failed: %s", filename, e)
 				}
 				//}
 			}
@@ -122,13 +125,16 @@ func ClientSync(client RPCClient) {
 					// case 2:
 					// locally modified the file no remote changes
 					if err1 := upload(client, localVersion, filename, baseDirFileInfoMap, baseDirFileBlockMap, localIndexMetaMap); err1 != nil {
-						var VersionErr = errors.New("wrong version metastore")
-						if errors.Is(err1, VersionErr) {
-							if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
-								log.Fatalf("Download %v failed: %s", filename, e)
-							}
-						} else {
-							log.Fatalf("Upload failed: %s", err1)
+						//var VersionErr = errors.New("wrong version metastore")
+						//if errors.Is(err1, VersionErr) {
+						//	if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
+						//		log.Fatalf("Download %v failed: %s", filename, e)
+						//	}
+						//} else {
+						//	log.Fatalf("Upload failed: %s", err1)
+						//}
+						if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
+							log.Fatalf("Download %v failed: %s", filename, e)
 						}
 					}
 
@@ -186,7 +192,7 @@ func download(client RPCClient, k string, serverFileInfoMap map[string]*FileMeta
 	isServerDeleted := len(remoteBlockHashList) == 1 && remoteBlockHashList[0] == "0"
 
 	localIndexMetaData, _ := localIndexMetaMap[k]
-	//fmt.Println("file is on local", isOnLocal)
+	////.Println("file is on local", isOnLocal)
 	localIndexHashList := localIndexMetaData.GetBlockHashList()
 
 	if isServerDeleted {
