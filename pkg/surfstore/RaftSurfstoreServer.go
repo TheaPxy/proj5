@@ -173,6 +173,8 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		}
 		if s.nextIndex[addr] < int64(len(s.log)) {
 			input.Entries = []*UpdateOperation{s.log[s.nextIndex[addr]]}
+		} else {
+			fmt.Println("?????????????????")
 		}
 		s.nextIndexMapMutex.Unlock()
 		fmt.Println("  Input ", input)
@@ -191,6 +193,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 			s.commitIndexMutex.Lock()
 			s.commitIndex++
 			s.commitIndexMutex.Unlock()
+			fmt.Println("  commitIndex ++ ")
 			break
 		}
 	}
