@@ -2,6 +2,8 @@ package surfstore
 
 import (
 	context "context"
+	"errors"
+	"fmt"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"time"
@@ -103,8 +105,11 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 		//remoteIndex := *FileInfoMap{}
 		remoteIndex, err := c.GetFileInfoMap(ctx, &emptypb.Empty{})
 		if err != nil {
+			if errors.Is(err, ERR_SERVER_CRASHED) {
+				fmt.Println("---------Error: err_server_crash 1----------")
+				return err
+			}
 			continue
-			//return err
 		}
 		*serverFileInfoMap = (*remoteIndex).FileInfoMap
 
@@ -133,6 +138,10 @@ func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersio
 		_, err = c.UpdateFile(ctx, fileMetaData)
 
 		if err != nil {
+			if errors.Is(err, ERR_SERVER_CRASHED) {
+				fmt.Println("---------Error: err_server_crash 2----------")
+				return err
+			}
 			continue
 			//return err
 		}
@@ -158,6 +167,10 @@ func (surfClient *RPCClient) GetBlockStoreAddr(blockStoreAddr *string) error {
 		addr, err := c.GetBlockStoreAddr(ctx, &emptypb.Empty{}) // addr: message type struct
 		if err != nil {
 			//conn.Close()
+			if errors.Is(err, ERR_SERVER_CRASHED) {
+				fmt.Println("---------Error: err_server_crash 3----------")
+				return err
+			}
 			continue
 			//return err
 		}
