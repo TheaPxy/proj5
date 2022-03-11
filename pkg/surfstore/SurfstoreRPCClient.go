@@ -90,74 +90,82 @@ func (surfClient *RPCClient) HasBlocks(blockHashesIn []string, blockStoreAddr st
 
 func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileMetaData) error {
 	//panic("todo")
-	conn, err := grpc.Dial(surfClient.MetaStoreAddrs[0], grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
+	for idx, _ := range surfClient.MetaStoreAddrs {
+		conn, err := grpc.Dial(surfClient.MetaStoreAddrs[idx], grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return err
+		}
+		c := NewRaftSurfstoreClient(conn)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+		// remoteIndex : FileInfoMap
+		//remoteIndex := *FileInfoMap{}
+		remoteIndex, err := c.GetFileInfoMap(ctx, &emptypb.Empty{})
+		if err != nil {
+			return err
+		}
+		*serverFileInfoMap = (*remoteIndex).FileInfoMap
+
+		//fmt.Println("Client func test GetFileInfoMap")
+		//PrintMetaMap(*serverFileInfoMap)
+
+		return conn.Close()
 	}
-	c := NewRaftSurfstoreClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	// remoteIndex : FileInfoMap
-	//remoteIndex := *FileInfoMap{}
-	remoteIndex, err := c.GetFileInfoMap(ctx, &emptypb.Empty{})
-	if err != nil {
-		return err
-	}
-	*serverFileInfoMap = (*remoteIndex).FileInfoMap
-
-	//fmt.Println("Client func test GetFileInfoMap")
-	//PrintMetaMap(*serverFileInfoMap)
-
-	return conn.Close()
+	return nil
 }
 
 func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersion *int32) error {
 	//fmt.Println("enter client updatefile")
-	conn, err := grpc.Dial(surfClient.MetaStoreAddrs[0], grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
+	for idx, _ := range surfClient.MetaStoreAddrs {
+		conn, err := grpc.Dial(surfClient.MetaStoreAddrs[idx], grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return err
+		}
+		c := NewRaftSurfstoreClient(conn)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		fileMetaData.Version = *latestVersion
+
+		_, err = c.UpdateFile(ctx, fileMetaData)
+
+		if err != nil {
+			return err
+		}
+
+		//fmt.Println("upload test: update file")
+		// close connection
+		return conn.Close()
 	}
-	c := NewRaftSurfstoreClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
-	fileMetaData.Version = *latestVersion
-
-	_, err = c.UpdateFile(ctx, fileMetaData)
-
-	if err != nil {
-		return err
-	}
-
-	//fmt.Println("upload test: update file")
-	// close connection
-	return conn.Close()
+	return nil
 }
 
 func (surfClient *RPCClient) GetBlockStoreAddr(blockStoreAddr *string) error {
-	conn, err := grpc.Dial(surfClient.MetaStoreAddrs[0], grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
+	for idx, _ := range surfClient.MetaStoreAddrs {
+		conn, err := grpc.Dial(surfClient.MetaStoreAddrs[idx], grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return err
+		}
+		c := NewRaftSurfstoreClient(conn)
+
+		// perform the call
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+		addr, err := c.GetBlockStoreAddr(ctx, &emptypb.Empty{}) // addr: message type struct
+		if err != nil {
+			//conn.Close()
+			return err
+		}
+		//fmt.Println("blockStoreAddr: ", addr.Addr)
+		*blockStoreAddr = addr.Addr
+
+		//fmt.Println("upload test: get block store addr")
+		// close the connection
+		return conn.Close()
 	}
-	c := NewRaftSurfstoreClient(conn)
-
-	// perform the call
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	addr, err := c.GetBlockStoreAddr(ctx, &emptypb.Empty{}) // addr: message type struct
-	if err != nil {
-		//conn.Close()
-		return err
-	}
-	//fmt.Println("blockStoreAddr: ", addr.Addr)
-	*blockStoreAddr = addr.Addr
-
-	//fmt.Println("upload test: get block store addr")
-	// close the connection
-	return conn.Close()
-
+	return nil
 }
 
 // This line guarantees all method for RPCClient are implemented
