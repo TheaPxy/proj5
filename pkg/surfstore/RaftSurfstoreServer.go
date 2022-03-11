@@ -247,6 +247,7 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *
 				s.isLeaderMutex.Lock()
 				s.isLeader = false
 				s.isLeaderMutex.Unlock()
+				s.term = output.Term
 				ok <- false
 				return
 			} else {
@@ -290,6 +291,13 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	if input.Term < s.term {
 		//output.Term =
 		return output, nil
+	}
+	s.isLeaderMutex.Lock()
+	if s.isLeader {
+		s.isLeaderMutex.Unlock()
+		s.isLeader = false
+	} else {
+		s.isLeaderMutex.Unlock()
 	}
 
 	// rule2 || rule3
