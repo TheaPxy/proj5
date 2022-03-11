@@ -178,7 +178,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		// if s.log is not empty
 		//s.nextIndexMapMutex.Lock()
 		//todo CorrectLog: check input.entries
-		fmt.Printf("--UpdateFile-- %v \n Leader's Log: %v, NextIndex %v", s.serverId, " ", s.log)
+		fmt.Printf("--UpdateFile-- %v \n Leader's Log: %v, NextIndex %v", s.serverId, s.log, s.nextIndex)
 		//fmt.Println("  NextIndex ", s.nextIndex)
 		//fmt.Println("  CommitIndex ", s.commitIndex)
 		s.nextIndexMapMutex.Lock()
@@ -197,6 +197,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 	for {
 		succ := <-ok
 		if succ {
+			fmt.Println("-----------succ count", count)
 			count++
 		}
 		if count > len(s.ipList)/2 {
