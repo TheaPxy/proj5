@@ -322,7 +322,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 
 	// todo: what if len(input.entries) == 0
 	// rule 5
-	fmt.Println("  s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " leader.commitIndex ", input.LeaderCommit)
+	fmt.Println("  325 s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " leader.commitIndex ", input.LeaderCommit, " s.log ", s.log)
 	if input.LeaderCommit > s.commitIndex {
 		//todo last append new entry?
 		s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
@@ -330,6 +330,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 
 	for s.lastApplied < s.commitIndex {
 		s.lastApplied++
+		fmt.Println("  s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " s.log ", s.log)
 		entry := s.log[s.lastApplied]
 		s.metaStore.UpdateFile(ctx, entry.FileMetaData)
 	}
