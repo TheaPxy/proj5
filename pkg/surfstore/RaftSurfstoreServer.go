@@ -156,44 +156,6 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 			continue
 		}
 
-		//s.nextIndexMapMutex.Unlock()
-		go s.AppendFollowerEntry(i, ok)
-	}
-	count := 1
-	for {
-		succ := <-ok
-		if succ {
-			count++
-		}
-		if count > len(s.ipList)/2 {
-			// majority of nodes are alive
-			// change leader's commit index
-			//todo how much commitIndex incre?
-			s.commitIndex++
-			break
-		}
-	}
-	return s.metaStore.UpdateFile(ctx, filemeta)
-}
-
-func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
-	// should similar to commitEntry
-	for {
-
-		//mutex here
-		s.isCrashedMutex.Lock()
-		if s.isCrashed {
-			s.isCrashedMutex.Unlock()
-			return
-		}
-		s.isCrashedMutex.Unlock()
-
-		addr := s.ipList[serverIdx]
-		conn, err := grpc.Dial(addr, grpc.WithInsecure())
-		if err != nil {
-			return
-		}
-		client := NewRaftSurfstoreClient(conn)
 		input := &AppendEntryInput{
 			Term: s.term,
 			//PrevLogTerm: s.log[s.nextIndex[idx]-1].Term,
@@ -215,12 +177,50 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 			input.PrevLogIndex = s.nextIndex[addr] - 1
 			//s.nextIndexMapMutex.Unlock()
 		}
-		//s.nextIndexMapMutex.Unlock()
-
-		//s.nextIndexMapMutex.Lock()
 		if s.nextIndex[addr] < int64(len(s.log)) {
 			input.Entries = s.log[s.nextIndex[addr]:]
 		}
+
+		//s.nextIndexMapMutex.Unlock()
+		go s.AppendFollowerEntry(i, ok, input)
+	}
+	count := 1
+	for {
+		succ := <-ok
+		if succ {
+			count++
+		}
+		if count > len(s.ipList)/2 {
+			// majority of nodes are alive
+			// change leader's commit index
+			//todo how much commitIndex incre?
+			s.commitIndex++
+			break
+		}
+	}
+	return s.metaStore.UpdateFile(ctx, filemeta)
+}
+
+func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *AppendEntryInput) {
+	// should similar to commitEntry
+	for {
+
+		//mutex here
+		s.isCrashedMutex.Lock()
+		if s.isCrashed {
+			s.isCrashedMutex.Unlock()
+			return
+		}
+		s.isCrashedMutex.Unlock()
+
+		addr := s.ipList[serverIdx]
+		conn, err := grpc.Dial(addr, grpc.WithInsecure())
+		if err != nil {
+			return
+		}
+		client := NewRaftSurfstoreClient(conn)
+
+		fmt.Println("  AppendFollowerEntry input: ", input)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
@@ -285,10 +285,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		Term:     s.term,
 		Success:  false,
 	}
-	// for count
-	if input.PrevLogIndex == -2 {
-		return output, nil
-	}
+
 	// rule 1
 	if input.Term < s.term {
 		//output.Term =
@@ -304,15 +301,14 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	// input.PrevLogIndex < len(s.log) && (< 0 || term ==)
 	s.term = input.Term
 	output.Term = s.term
-	if len(s.log) > int(input.PrevLogIndex) {
-		//todo overwrite log
-		if input.PrevLogIndex < 0 {
-			//todo what if sendHeartBeat?
-			s.log = make([]*UpdateOperation, 0)
-		} else {
-			s.log = s.log[:input.PrevLogIndex+1]
-		}
+
+	//todo overwrite log
+	if input.PrevLogIndex < 0 {
+		s.log = make([]*UpdateOperation, 0)
+	} else {
+		s.log = s.log[:input.PrevLogIndex+1]
 	}
+
 	// rule 4
 	s.log = append(s.log, input.Entries...)
 
@@ -320,6 +316,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	// rule 5
 	fmt.Println("  s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " leader.commitIndex ", input.LeaderCommit)
 	if input.LeaderCommit > s.commitIndex {
+		//todo last append new entry?
 		s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
 	}
 
@@ -413,6 +410,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			s.isLeaderMutex.Lock()
 			s.isLeader = false
 			s.isLeaderMutex.Unlock()
+			return nil, nil
 		}
 		if output != nil && output.Success {
 			s.nextIndex[addr] += int64(len(input.Entries))
@@ -458,7 +456,7 @@ func (s *RaftSurfstore) GetInternalState(ctx context.Context, empty *emptypb.Emp
 }
 
 func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty) (int, error) {
-	count := 0
+	count := 1
 	//s.isCrashedMutex.Lock()
 	//if s.isCrashed {
 	//	s.isCrashedMutex.Unlock()
