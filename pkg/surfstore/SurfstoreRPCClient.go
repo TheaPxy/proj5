@@ -96,7 +96,6 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 		if err != nil {
 			return err
 		}
-		fmt.Printf("--------GetFileInfoMap--------- server %v is leader", idx)
 		c := NewRaftSurfstoreClient(conn)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -111,9 +110,10 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 			//	fmt.Println("---------Error: err_server_crash 1.1----------")
 			//	return e
 			//}
-
+			fmt.Printf("--------GetFileInfoMap--------- server %v is not normal", idx)
 			continue
 		}
+		fmt.Printf("--------GetFileInfoMap--------- server %v is leader", idx)
 		*serverFileInfoMap = (*remoteIndex).FileInfoMap
 
 		//fmt.Println("Client func test GetFileInfoMap")
