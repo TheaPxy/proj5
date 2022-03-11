@@ -71,20 +71,21 @@ func (s *RaftSurfstore) GetFileInfoMap(ctx context.Context, empty *emptypb.Empty
 	//	return nil, ERR_NOT_LEADER
 	//}
 	//s.isCrashedMutex.Unlock()
-	for {
-		count, err := s.CountFollowers(ctx, empty)
-		if err != nil {
-			return nil, err
-		}
-		if count > len(s.ipList)/2 {
-			break
-		}
-	}
-	fileInfoMap, err := s.metaStore.GetFileInfoMap(ctx, empty)
+	//for {
+	count, err := s.CountFollowers(ctx, empty)
 	if err != nil {
 		return nil, err
 	}
-	return fileInfoMap, nil
+	if count > len(s.ipList)/2 {
+		fileInfoMap, err := s.metaStore.GetFileInfoMap(ctx, empty)
+		if err != nil {
+			return nil, err
+		}
+		return fileInfoMap, nil
+	} else {
+		return nil, ERR_SERVER_CRASHED
+	}
+	//}
 
 }
 
@@ -106,20 +107,35 @@ func (s *RaftSurfstore) GetBlockStoreAddr(ctx context.Context, empty *emptypb.Em
 	////s.isCrashedMutex.Unlock()
 
 	// majority of nodes are not working, block
-	for {
-		count, err := s.CountFollowers(ctx, empty)
-		if err != nil {
-			return nil, err
-		}
-		if count > len(s.ipList)/2 {
-			break
-		}
-	}
-	addr, err := s.metaStore.GetBlockStoreAddr(ctx, empty)
+
+	//for {
+	//	count, err := s.CountFollowers(ctx, empty)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	if count > len(s.ipList)/2 {
+	//		break
+	//	}
+	//}
+	//addr, err := s.metaStore.GetBlockStoreAddr(ctx, empty)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//return addr, nil
+	count, err := s.CountFollowers(ctx, empty)
 	if err != nil {
 		return nil, err
 	}
-	return addr, nil
+	if count > len(s.ipList)/2 {
+		addr, err := s.metaStore.GetBlockStoreAddr(ctx, empty)
+		if err != nil {
+			return nil, err
+		}
+		return addr, nil
+	} else {
+		return nil, ERR_SERVER_CRASHED
+	}
+
 }
 
 func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) (*Version, error) {
@@ -539,6 +555,9 @@ func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty
 		isCrash, err := client.IsCrashed(ctx, &emptypb.Empty{})
 
 		fmt.Printf("--count follower is crash-- %v %v \n", idx, isCrash)
+		if err != nil || isCrash == nil {
+			return -1, err
+		}
 		if !isCrash.IsCrashed {
 			count++
 		}
