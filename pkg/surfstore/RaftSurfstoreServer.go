@@ -161,7 +161,6 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		if count > len(s.ipList)/2 {
 			// majority of nodes are alive
 			// change leader's commit index
-			//todo change state machine????
 			//todo how much commitIndex incre?
 			s.commitIndex++
 			break
@@ -293,7 +292,8 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	output.Term = s.term
 	if len(s.log) > int(input.PrevLogIndex) {
 		//todo overwrite log
-		if input.PrevLogIndex < 0 {
+		if input.PrevLogIndex < 0 && len(input.Entries) != 0 {
+			//todo what if sendHeartBeat?
 			s.log = make([]*UpdateOperation, 0)
 		} else {
 			s.log = s.log[:input.PrevLogIndex+1]
