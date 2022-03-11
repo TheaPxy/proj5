@@ -271,7 +271,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	}
 	s.isCrashedMutex.Unlock()
 	fmt.Println("--AppendEntries--")
-	fmt.Println("  ", s.ip, " --Follower input-- ", input)
+	fmt.Println("  ", s.ip, " Follower input ", input, " s prev log ", s.log)
 	output := &AppendEntryOutput{
 		ServerId: s.serverId,
 		Term:     s.term,
@@ -368,7 +368,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 		if int64(idx) == s.serverId {
 			continue
 		}
-		fmt.Printf("--SendHeartBeat-- Server Id: %d, Receiver Id: %d, term: %d \n", s.serverId, addr, s.term)
+		fmt.Println("--SendHeartBeat-- leader Id: Receiver Id: term: ", s.ip, addr, s.term)
 		conn, err := grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
 			return nil, nil
@@ -385,6 +385,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 		}
 
 		fmt.Println("  NextIndex ", s.nextIndex)
+		fmt.Println("  s log ", s.log)
 		// if s.log is not empty
 		if s.nextIndex[addr] >= 1 {
 			input.PrevLogTerm = s.log[s.nextIndex[addr]-1].Term
@@ -394,13 +395,13 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			input.Entries = s.log[s.nextIndex[addr]:]
 		}
 
-		fmt.Println("  Leader's Log ", s.ip, " ", s.log)
-		fmt.Println("  ", s.ip, " --Follower input.entry-- ", input.Entries)
+		//fmt.Println("  Leader's Log ", s.ip, " ", s.log)
+		fmt.Println("  input.entry ", input.Entries)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
 
-		fmt.Println("--Back to SendHeartBeat--  AppendEntries output: ", output, " s term: ", s.term)
+		//fmt.Println("--Back to SendHeartBeat--  AppendEntries output: ", output, " s term: ", s.term)
 		if output != nil && !output.Success && output.Term > s.term {
 			s.isLeaderMutex.Lock()
 			s.isLeader = false
