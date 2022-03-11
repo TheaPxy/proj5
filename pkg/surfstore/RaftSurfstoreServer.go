@@ -49,12 +49,9 @@ type RaftSurfstore struct {
 
 func (s *RaftSurfstore) GetFileInfoMap(ctx context.Context, empty *emptypb.Empty) (*FileInfoMap, error) {
 	// s is crashed
-	// s.isCrashedMutex.Lock()
-	// if s.isCrashed {
-	// 	s.isCrashedMutex.Unlock()
-	// 	return nil, ERR_SERVER_CRASHED
-	// }
-	// s.isCrashedMutex.Unlock()
+	fmt.Println("--GetFileInfoMap--")
+	fmt.Println("iscrashed, isleader: ", s.serverId, s.ip, s.isCrashed, s.isLeader)
+
 	s.isLeaderMutex.Lock()
 	if !s.isLeader {
 		s.isLeaderMutex.Unlock()
@@ -63,6 +60,14 @@ func (s *RaftSurfstore) GetFileInfoMap(ctx context.Context, empty *emptypb.Empty
 	s.isLeaderMutex.Unlock()
 
 	// majority of nodes are not working, block
+
+	//s.isCrashedMutex.Lock()
+	//if s.isCrashed {
+	//	s.isCrashedMutex.Unlock()
+	//	//return nil, ERR_SERVER_CRASHED
+	//	return nil, ERR_NOT_LEADER
+	//}
+	//s.isCrashedMutex.Unlock()
 	for {
 		count, err := s.CountFollowers(ctx, empty)
 		if err != nil {
@@ -82,18 +87,20 @@ func (s *RaftSurfstore) GetFileInfoMap(ctx context.Context, empty *emptypb.Empty
 
 func (s *RaftSurfstore) GetBlockStoreAddr(ctx context.Context, empty *emptypb.Empty) (*BlockStoreAddr, error) {
 	// s is crashed
-	// s.isCrashedMutex.Lock()
-	// if s.isCrashed {
-	// 	s.isCrashedMutex.Unlock()
-	// 	return nil, ERR_SERVER_CRASHED
-	// }
-	// s.isCrashedMutex.Unlock()
+
 	s.isLeaderMutex.Lock()
 	if !s.isLeader {
 		s.isLeaderMutex.Unlock()
 		return nil, ERR_NOT_LEADER
 	}
 	s.isLeaderMutex.Unlock()
+
+	////s.isCrashedMutex.Lock()
+	////if s.isCrashed {
+	////	s.isCrashedMutex.Unlock()
+	////	return nil, ERR_NOT_LEADER////
+	////}
+	////s.isCrashedMutex.Unlock()
 
 	// majority of nodes are not working, block
 	for {
@@ -270,12 +277,17 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		return nil, ERR_SERVER_CRASHED
 	}
 	s.isCrashedMutex.Unlock()
+
 	fmt.Println("--AppendEntries--")
 	fmt.Println("  ", s.ip, " Follower input ", input, " s prev log ", s.log)
 	output := &AppendEntryOutput{
 		ServerId: s.serverId,
 		Term:     s.term,
 		Success:  false,
+	}
+	// for count
+	if input.PrevLogIndex == -2 {
+		return output, nil
 	}
 	// rule 1
 	if input.Term < s.term {
@@ -308,11 +320,6 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	// rule 5
 	fmt.Println("  s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " leader.commitIndex ", input.LeaderCommit)
 	if input.LeaderCommit > s.commitIndex {
-		//if len(input.Entries) != 0 {
-		//	s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
-		//} else {
-		//	s.commitIndex = input.LeaderCommit
-		//}
 		s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
 	}
 
@@ -410,6 +417,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 		if output != nil && output.Success {
 			s.nextIndex[addr] += int64(len(input.Entries))
 		}
+
 	}
 
 	return &Success{Flag: true}, nil
@@ -451,33 +459,43 @@ func (s *RaftSurfstore) GetInternalState(ctx context.Context, empty *emptypb.Emp
 
 func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty) (int, error) {
 	count := 0
+	//s.isCrashedMutex.Lock()
+	//if s.isCrashed {
+	//	s.isCrashedMutex.Unlock()
+	//	return -1, ERR_SERVER_CRASHED
+	//}
+	//s.isCrashedMutex.Unlock()
+	//
+	//s.isLeaderMutex.Lock()
+	//if !s.isLeader {
+	//	s.isLeaderMutex.Unlock()
+	//	return -1, ERR_NOT_LEADER
+	//}
+	//s.isLeaderMutex.Unlock()
+
 	for idx, addr := range s.ipList {
 		if int64(idx) == s.serverId {
 			continue
 		}
-
+		fmt.Println("--CountFollowers-- leader Id: Receiver Id: term: ", s.ip, addr, s.term)
 		conn, err := grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
-			return -1, nil
+			continue
 		}
 		client := NewRaftSurfstoreClient(conn)
 
-		input := &AppendEntryInput{
-			Term:         s.term,
-			PrevLogTerm:  -1,
-			PrevLogIndex: -1,
-			Entries:      make([]*UpdateOperation, 0),
-			LeaderCommit: s.commitIndex,
-		}
-
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		output, err := client.AppendEntries(ctx, input)
-		if output != nil {
-			// server is alive
+
+		isCrash, err := client.IsCrashed(ctx, &emptypb.Empty{})
+
+		//fmt.Println("--Back to SendHeartBeat--  AppendEntries output: ", output, " s term: ", s.term)
+		if !isCrash.IsCrashed {
 			count++
 		}
+
 	}
+	//return &Success{Flag: true}, nil
 	return count, nil
 }
 
