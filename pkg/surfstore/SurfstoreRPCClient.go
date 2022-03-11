@@ -109,7 +109,8 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 			//	fmt.Println("---------Error: err_server_crash 1.1----------")
 			//	return e
 			//}
-			continue //
+
+			continue
 		}
 		*serverFileInfoMap = (*remoteIndex).FileInfoMap
 
@@ -118,7 +119,7 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 
 		return conn.Close()
 	}
-	return nil
+	return ERR_SERVER_CRASHED
 }
 
 func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersion *int32) error {
@@ -151,7 +152,7 @@ func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersio
 		// close connection
 		return conn.Close()
 	}
-	return nil
+	return ERR_SERVER_CRASHED
 }
 
 func (surfClient *RPCClient) GetBlockStoreAddr(blockStoreAddr *string) error {
@@ -183,7 +184,7 @@ func (surfClient *RPCClient) GetBlockStoreAddr(blockStoreAddr *string) error {
 		// close the connection
 		return conn.Close()
 	}
-	return nil
+	return ERR_SERVER_CRASHED
 }
 
 // This line guarantees all method for RPCClient are implemented
