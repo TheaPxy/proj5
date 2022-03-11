@@ -102,15 +102,15 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 		defer cancel()
 		// remoteIndex : FileInfoMap
 		//remoteIndex := *FileInfoMap{}
-		remoteIndex, err := c.GetFileInfoMap(ctx, &emptypb.Empty{})
-		if err != nil {
+		remoteIndex, e := c.GetFileInfoMap(ctx, &emptypb.Empty{})
+		if e != nil {
 
-			fmt.Println("---------Error: err_server_crash 1----------", err)
-			if err.Error() == "Majority Server Down" {
+			fmt.Println("---------Error: err_server_crash 1----------", e, e.Error() == "Majority Server Down")
+			if e.Error() == "Majority Server Down" {
 				fmt.Println("---------Error: err_server_crash 1.1----------")
-				return err
+				return e
 			}
-			continue
+			continue //
 		}
 		*serverFileInfoMap = (*remoteIndex).FileInfoMap
 
@@ -136,13 +136,13 @@ func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersio
 
 		fileMetaData.Version = *latestVersion
 
-		_, err = c.UpdateFile(ctx, fileMetaData)
+		_, e := c.UpdateFile(ctx, fileMetaData)
 
-		if err != nil {
-			fmt.Println("---------Error: err_server_crash 2----------", err)
-			if err.Error() == "Majority Server Down" {
+		if e != nil {
+			fmt.Println("---------Error: err_server_crash 2----------", e)
+			if e.Error() == "Majority Server Down" {
 				fmt.Println("---------Error: err_server_crash 2.1----------")
-				return err
+				return e
 			}
 			continue
 			//return err
@@ -166,13 +166,13 @@ func (surfClient *RPCClient) GetBlockStoreAddr(blockStoreAddr *string) error {
 		// perform the call
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
-		addr, err := c.GetBlockStoreAddr(ctx, &emptypb.Empty{}) // addr: message type struct
-		if err != nil {
+		addr, e := c.GetBlockStoreAddr(ctx, &emptypb.Empty{}) // addr: message type struct
+		if e != nil {
 			//conn.Close()
-			fmt.Println("---------Error: err_server_crash 3----------", err)
-			if err.Error() == "Majority Server Down" {
+			fmt.Println("---------Error: err_server_crash 3----------", e)
+			if e.Error() == "Majority Server Down" {
 				fmt.Println("---------Error: err_server_crash 3.1----------")
-				return err
+				return e
 			}
 			continue
 			//return err
