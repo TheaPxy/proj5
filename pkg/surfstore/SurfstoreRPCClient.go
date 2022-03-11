@@ -103,7 +103,8 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 		//remoteIndex := *FileInfoMap{}
 		remoteIndex, err := c.GetFileInfoMap(ctx, &emptypb.Empty{})
 		if err != nil {
-			return err
+			continue
+			//return err
 		}
 		*serverFileInfoMap = (*remoteIndex).FileInfoMap
 
@@ -132,7 +133,8 @@ func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersio
 		_, err = c.UpdateFile(ctx, fileMetaData)
 
 		if err != nil {
-			return err
+			continue
+			//return err
 		}
 
 		//fmt.Println("upload test: update file")
@@ -156,7 +158,8 @@ func (surfClient *RPCClient) GetBlockStoreAddr(blockStoreAddr *string) error {
 		addr, err := c.GetBlockStoreAddr(ctx, &emptypb.Empty{}) // addr: message type struct
 		if err != nil {
 			//conn.Close()
-			return err
+			continue
+			//return err
 		}
 		//fmt.Println("blockStoreAddr: ", addr.Addr)
 		*blockStoreAddr = addr.Addr

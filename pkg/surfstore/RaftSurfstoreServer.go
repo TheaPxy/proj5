@@ -355,6 +355,7 @@ func (s *RaftSurfstore) SetLeader(ctx context.Context, _ *emptypb.Empty) (*Succe
 	s.nextIndexMapMutex.Lock()
 	for i, _ := range s.nextIndex {
 		s.commitIndexMutex.Lock()
+		//todo ?????????????????????
 		s.nextIndex[i] = s.commitIndex + 1
 		s.commitIndexMutex.Unlock()
 	}
