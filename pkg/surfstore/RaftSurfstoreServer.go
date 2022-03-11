@@ -200,8 +200,9 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 		// if s.log is not empty
 		//s.nextIndexMapMutex.Lock()
 		//todo CorrectLog: check input.entries
-		fmt.Println("--AppendFollowerEntry--Leader's Log-- ", s.ip, " ", s.log)
-		fmt.Println("--AppendFollowerEntry--AppendFollowerEntry-- NextIndex ", s.nextIndex)
+		fmt.Println("--AppendFollowerEntry--")
+		fmt.Println("  Leader's Log:  ", s.ip, " ", s.log)
+		fmt.Println("  NextIndex ", s.nextIndex)
 		if s.nextIndex[addr] >= 1 {
 			input.PrevLogTerm = s.log[s.nextIndex[addr]-1].Term
 			input.PrevLogIndex = s.nextIndex[addr] - 1
@@ -269,7 +270,8 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		return nil, ERR_SERVER_CRASHED
 	}
 	s.isCrashedMutex.Unlock()
-	fmt.Println("--AppendEntries--", s.ip, " --Follower input-- ", input)
+	fmt.Println("--AppendEntries--")
+	fmt.Println("  ", s.ip, " --Follower input-- ", input)
 	output := &AppendEntryOutput{
 		ServerId: s.serverId,
 		Term:     s.term,
@@ -304,7 +306,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 
 	// todo: what if len(input.entries) == 0
 	// rule 5
-	fmt.Println("--AppendEntries-- s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " leader.commitIndex ", input.LeaderCommit)
+	fmt.Println("  s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " leader.commitIndex ", input.LeaderCommit)
 	if input.LeaderCommit > s.commitIndex {
 		//if len(input.Entries) != 0 {
 		//	s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
@@ -319,7 +321,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		entry := s.log[s.lastApplied]
 		s.metaStore.UpdateFile(ctx, entry.FileMetaData)
 	}
-	fmt.Println("--AppendEntries-- Append Success", s.ip, " log ", s.log)
+	fmt.Println("  Append Success", s.ip, " log ", s.log)
 	output.Success = true
 	return output, nil
 }
@@ -382,6 +384,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			LeaderCommit: s.commitIndex,
 		}
 
+		fmt.Println("  NextIndex ", s.nextIndex)
 		// if s.log is not empty
 		if s.nextIndex[addr] >= 1 {
 			input.PrevLogTerm = s.log[s.nextIndex[addr]-1].Term
@@ -391,14 +394,13 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			input.Entries = s.log[s.nextIndex[addr]:]
 		}
 
-		fmt.Println("--SendHeartBeat--Leader's Log-- ", s.ip, " ", s.log)
-		fmt.Println("--SendHeartBeat-- NextIndex ", s.nextIndex)
-		fmt.Println("--SendHeartBeat--", s.ip, " --Follower input.entry-- ", input.Entries)
+		fmt.Println("  Leader's Log ", s.ip, " ", s.log)
+		fmt.Println("  ", s.ip, " --Follower input.entry-- ", input.Entries)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
 
-		fmt.Println("--SendHeartBeat-- AppendEntries output: ", output, " s term: ", s.term)
+		fmt.Println("--Back to SendHeartBeat--  AppendEntries output: ", output, " s term: ", s.term)
 		if output != nil && !output.Success && output.Term > s.term {
 			s.isLeaderMutex.Lock()
 			s.isLeader = false
