@@ -2,6 +2,7 @@ package surfstore
 
 import (
 	context "context"
+	"fmt"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"time"
@@ -95,6 +96,7 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 		if err != nil {
 			return err
 		}
+		fmt.Printf("--------GetFileInfoMap--------- server %v is leader", idx)
 		c := NewRaftSurfstoreClient(conn)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)

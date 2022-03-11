@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -27,10 +28,10 @@ func ClientSync(client RPCClient) {
 	}
 
 	updateBaseDirVersion(baseDirFileInfoMap, localIndexMetaMap)
-	//fmt.Println("BaseDir Map ", client.BaseDir)
-	//PrintMetaMap(baseDirFileInfoMap)
-	//fmt.Println("Local Index Map", client.BaseDir)
-	//PrintMetaMap(localIndexMetaMap)
+	fmt.Println("BaseDir Map ", client.BaseDir)
+	PrintMetaMap(baseDirFileInfoMap)
+	fmt.Println("Local Index Map", client.BaseDir)
+	PrintMetaMap(localIndexMetaMap)
 
 	// client download updated FileInfoMap (remote index) from server
 	//serverFileInfoMap := make(map[string]*FileMetaData)
@@ -38,8 +39,8 @@ func ClientSync(client RPCClient) {
 	if err := client.GetFileInfoMap(&serverFileInfoMap); err != nil {
 		log.Fatalf("Fetch server FileInfoMap failed: %s", err)
 	}
-	//fmt.Println("Server Index Map ", client.BaseDir)
-	//PrintMetaMap(serverFileInfoMap)
+	fmt.Println("Server Index Map ", client.BaseDir)
+	PrintMetaMap(serverFileInfoMap)
 	for filename := range baseDirFileInfoMap {
 		if filename == "index.txt" {
 			continue
