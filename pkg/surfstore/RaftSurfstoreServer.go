@@ -278,7 +278,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	}
 	s.isCrashedMutex.Unlock()
 
-	fmt.Printf("--AppendEntries-- %v \n Input Received: %v \n, s prev log: %v \n", s.serverId, input, s.log)
+	fmt.Printf("--AppendEntries-- %v \n Input Received: %v \n s prev log: %v \n", s.serverId, input, s.log)
 	//fmt.Println("  ", s.ip, " Follower input ", input, " s prev log ", s.log)
 	output := &AppendEntryOutput{
 		ServerId: s.serverId,
@@ -515,12 +515,12 @@ func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty
 	//}
 	//s.isCrashedMutex.Unlock()
 	//
-	//s.isLeaderMutex.Lock()
-	//if !s.isLeader {
-	//	s.isLeaderMutex.Unlock()
-	//	return -1, ERR_NOT_LEADER
-	//}
-	//s.isLeaderMutex.Unlock()
+	s.isLeaderMutex.Lock()
+	if !s.isLeader {
+		s.isLeaderMutex.Unlock()
+		return -1, ERR_NOT_LEADER
+	}
+	s.isLeaderMutex.Unlock()
 
 	for idx, addr := range s.ipList {
 		if int64(idx) == s.serverId {
