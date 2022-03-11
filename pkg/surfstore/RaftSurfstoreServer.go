@@ -292,7 +292,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	output.Term = s.term
 	if len(s.log) > int(input.PrevLogIndex) {
 		//todo overwrite log
-		if input.PrevLogIndex < 0 && len(input.Entries) != 0 {
+		if input.PrevLogIndex < 0 {
 			//todo what if sendHeartBeat?
 			s.log = make([]*UpdateOperation, 0)
 		} else {
