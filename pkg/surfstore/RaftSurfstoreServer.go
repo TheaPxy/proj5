@@ -144,10 +144,12 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 	//}
 	ok := make(chan bool, len(s.ipList)-1)
 
-	for i, p := range s.ipList {
-		if p == s.ip {
+	for i, addr := range s.ipList {
+		if addr == s.ip {
 			continue
 		}
+
+		//s.nextIndexMapMutex.Unlock()
 		go s.AppendFollowerEntry(i, ok)
 	}
 	count := 1
@@ -171,6 +173,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 	// should similar to commitEntry
 	for {
+
 		//mutex here
 		s.isCrashedMutex.Lock()
 		if s.isCrashed {
@@ -185,7 +188,6 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 			return
 		}
 		client := NewRaftSurfstoreClient(conn)
-
 		input := &AppendEntryInput{
 			Term: s.term,
 			//PrevLogTerm: s.log[s.nextIndex[idx]-1].Term,
@@ -212,14 +214,13 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool) {
 		if s.nextIndex[addr] < int64(len(s.log)) {
 			input.Entries = s.log[s.nextIndex[addr]:]
 		}
-		//s.nextIndexMapMutex.Unlock()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
 		// todo: error location
 		if err != nil {
-			fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
+			//fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
 			continue
 		}
 		if output.Success {
@@ -269,7 +270,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		return nil, ERR_SERVER_CRASHED
 	}
 	s.isCrashedMutex.Unlock()
-	fmt.Println("--AppendEntries--", s.ip, " --Follower input.entry-- ", input.Entries)
+	fmt.Println("--AppendEntries--", s.ip, " --Follower input-- ", input)
 	output := &AppendEntryOutput{
 		ServerId: s.serverId,
 		Term:     s.term,
@@ -282,14 +283,18 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	}
 
 	// rule2 || rule3
-	if len(s.log) <= int(input.PrevLogIndex) || input.PrevLogIndex >= 0 && s.log[input.PrevLogIndex].Term != input.PrevLogTerm {
+	// todo never entered
+	if len(s.log) <= int(input.PrevLogIndex) || (input.PrevLogIndex >= 0 && s.log[input.PrevLogIndex].Term != input.PrevLogTerm) {
 		return output, nil
 	}
 
 	// input.PrevLogIndex < len(s.log) && (< 0 || term ==)
 	s.term = input.Term
 	output.Term = s.term
-
+	if len(s.log) > int(input.PrevLogIndex) {
+		//todo overwrite log
+		s.log = s.log[:input.PrevLogIndex+1]
+	}
 	// rule 4
 	s.log = append(s.log, input.Entries...)
 
@@ -303,7 +308,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		entry := s.log[s.lastApplied]
 		s.metaStore.UpdateFile(ctx, entry.FileMetaData)
 	}
-	fmt.Println("--AppendEntries-- ", s.ip, " log ", s.log)
+	fmt.Println("--AppendEntries-- Append Success", s.ip, " log ", s.log)
 	output.Success = true
 	return output, nil
 }
