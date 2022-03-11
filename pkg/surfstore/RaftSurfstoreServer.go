@@ -178,7 +178,8 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 			//s.nextIndexMapMutex.Unlock()
 		}
 		if s.nextIndex[addr] < int64(len(s.log)) {
-			input.Entries = s.log[s.nextIndex[addr]:]
+			// todo
+			input.Entries = []*UpdateOperation{s.log[s.nextIndex[addr]]}
 		}
 
 		//s.nextIndexMapMutex.Unlock()
@@ -235,7 +236,7 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *
 			// rule 4, rule 5
 			// s.term = output.Term
 			//s.nextIndexMapMutex.Lock()
-			s.nextIndex[addr] += int64(len(input.Entries))
+			s.nextIndex[addr]++
 			//s.nextIndexMapMutex.Unlock()
 			ok <- true
 			return
@@ -318,6 +319,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	}
 
 	// rule 4
+	// todo concurrent safe
 	s.log = append(s.log, input.Entries...)
 
 	// todo: what if len(input.entries) == 0
@@ -405,7 +407,8 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			input.PrevLogIndex = s.nextIndex[addr] - 1
 		}
 		if s.nextIndex[addr] < int64(len(s.log)) {
-			input.Entries = s.log[s.nextIndex[addr]:]
+			//input.Entries = s.log[s.nextIndex[addr]:]
+			input.Entries = []*UpdateOperation{s.log[s.nextIndex[addr]]}
 		}
 
 		//fmt.Println("  Leader's Log ", s.ip, " ", s.log)
