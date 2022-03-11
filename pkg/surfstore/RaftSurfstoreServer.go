@@ -306,12 +306,14 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	// rule 5
 	fmt.Println("--AppendEntries-- s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " leader.commitIndex ", input.LeaderCommit)
 	if input.LeaderCommit > s.commitIndex {
-		if len(input.Entries) != 0 {
-			s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
-		} else {
-			s.commitIndex = input.LeaderCommit
-		}
+		//if len(input.Entries) != 0 {
+		//	s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
+		//} else {
+		//	s.commitIndex = input.LeaderCommit
+		//}
+		s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
 	}
+
 	for s.lastApplied < s.commitIndex {
 		s.lastApplied++
 		entry := s.log[s.lastApplied]
