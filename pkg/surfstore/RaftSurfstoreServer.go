@@ -64,13 +64,13 @@ func (s *RaftSurfstore) GetFileInfoMap(ctx context.Context, empty *emptypb.Empty
 
 	// majority of nodes are not working, block
 
-	//s.isCrashedMutex.Lock()
-	//if s.isCrashed {
-	//	s.isCrashedMutex.Unlock()
-	//	//return nil, ERR_SERVER_CRASHED
-	//	return nil, ERR_NOT_LEADER
-	//}
-	//s.isCrashedMutex.Unlock()
+	s.isCrashedMutex.Lock()
+	if s.isCrashed {
+		s.isCrashedMutex.Unlock()
+		//return nil, ERR_SERVER_CRASHED
+		return nil, ERR_SERVER_CRASHED
+	}
+	s.isCrashedMutex.Unlock()
 	for {
 		count, err := s.CountFollowers(ctx, empty)
 		if err != nil {
