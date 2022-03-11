@@ -105,7 +105,7 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 		remoteIndex, err := c.GetFileInfoMap(ctx, &emptypb.Empty{})
 		if err != nil {
 
-			fmt.Println("---------Error: err_server_crash 1----------")
+			fmt.Println("---------Error: err_server_crash 1----------", err)
 			if err.Error() == "Majority Server Down" {
 				fmt.Println("---------Error: err_server_crash 1.1----------")
 				return err
@@ -139,7 +139,7 @@ func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersio
 		_, err = c.UpdateFile(ctx, fileMetaData)
 
 		if err != nil {
-			fmt.Println("---------Error: err_server_crash 2----------")
+			fmt.Println("---------Error: err_server_crash 2----------", err)
 			if err.Error() == "Majority Server Down" {
 				fmt.Println("---------Error: err_server_crash 2.1----------")
 				return err
@@ -169,7 +169,7 @@ func (surfClient *RPCClient) GetBlockStoreAddr(blockStoreAddr *string) error {
 		addr, err := c.GetBlockStoreAddr(ctx, &emptypb.Empty{}) // addr: message type struct
 		if err != nil {
 			//conn.Close()
-			fmt.Println("---------Error: err_server_crash 3----------")
+			fmt.Println("---------Error: err_server_crash 3----------", err)
 			if err.Error() == "Majority Server Down" {
 				fmt.Println("---------Error: err_server_crash 3.1----------")
 				return err
