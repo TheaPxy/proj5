@@ -44,7 +44,7 @@ func TestSyncTwoClientsSameFileLeaderFailure(t *testing.T) {
 
 	test.Clients[0].SendHeartbeat(test.Context, &emptypb.Empty{})
 
-	test.Clients[0].Crash(test.Context, &emptypb.Empty{})
+	test.Clients[1].Crash(test.Context, &emptypb.Empty{})
 	test.Clients[1].SetLeader(test.Context, &emptypb.Empty{})
 	test.Clients[1].SendHeartbeat(test.Context, &emptypb.Empty{})
 
