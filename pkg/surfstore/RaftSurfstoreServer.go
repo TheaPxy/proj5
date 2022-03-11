@@ -339,16 +339,16 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		s.isLeaderMutex.Unlock()
 	}
 
+	// input.PrevLogIndex < len(s.log) && (< 0 || term ==)
+	s.term = input.Term
+	output.Term = s.term
+
 	// rule2 || rule3
 	// todo never entered
 	if len(s.log) <= int(input.PrevLogIndex) || (input.PrevLogIndex >= 0 && s.log[input.PrevLogIndex].Term != input.PrevLogTerm) {
 		fmt.Printf("-------------violate rule 2, 3: s.log: %v, input.PrevLogIndex: %v ", s.log, input.PrevLogTerm)
 		return output, nil
 	}
-
-	// input.PrevLogIndex < len(s.log) && (< 0 || term ==)
-	s.term = input.Term
-	output.Term = s.term
 
 	//todo overwrite log
 	if input.PrevLogIndex < 0 {
