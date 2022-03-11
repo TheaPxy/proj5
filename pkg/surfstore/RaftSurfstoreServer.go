@@ -2,6 +2,7 @@ package surfstore
 
 import (
 	context "context"
+	"errors"
 	"fmt"
 	"google.golang.org/grpc"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -83,7 +84,7 @@ func (s *RaftSurfstore) GetFileInfoMap(ctx context.Context, empty *emptypb.Empty
 		}
 		return fileInfoMap, nil
 	} else {
-		return nil, ERR_SERVER_CRASHED
+		return nil, errors.New("Majority Server Down")
 	}
 	//}
 
@@ -133,7 +134,7 @@ func (s *RaftSurfstore) GetBlockStoreAddr(ctx context.Context, empty *emptypb.Em
 		}
 		return addr, nil
 	} else {
-		return nil, ERR_SERVER_CRASHED
+		return nil, errors.New("Majority Server Down")
 	}
 
 }

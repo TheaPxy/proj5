@@ -2,7 +2,6 @@ package surfstore
 
 import (
 	context "context"
-	"errors"
 	"fmt"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -105,8 +104,9 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 		//remoteIndex := *FileInfoMap{}
 		remoteIndex, err := c.GetFileInfoMap(ctx, &emptypb.Empty{})
 		if err != nil {
+
 			fmt.Println("---------Error: err_server_crash 1----------")
-			if errors.Is(err, ERR_SERVER_CRASHED) {
+			if err.Error() == "Majority Server Down" {
 				fmt.Println("---------Error: err_server_crash 1.1----------")
 				return err
 			}
@@ -140,7 +140,7 @@ func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersio
 
 		if err != nil {
 			fmt.Println("---------Error: err_server_crash 2----------")
-			if errors.Is(err, ERR_SERVER_CRASHED) {
+			if err.Error() == "Majority Server Down" {
 				fmt.Println("---------Error: err_server_crash 2.1----------")
 				return err
 			}
@@ -170,7 +170,7 @@ func (surfClient *RPCClient) GetBlockStoreAddr(blockStoreAddr *string) error {
 		if err != nil {
 			//conn.Close()
 			fmt.Println("---------Error: err_server_crash 3----------")
-			if errors.Is(err, ERR_SERVER_CRASHED) {
+			if err.Error() == "Majority Server Down" {
 				fmt.Println("---------Error: err_server_crash 3.1----------")
 				return err
 			}
