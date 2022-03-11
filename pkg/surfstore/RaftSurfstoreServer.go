@@ -515,12 +515,12 @@ func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty
 	//}
 	//s.isCrashedMutex.Unlock()
 	//
-	s.isLeaderMutex.Lock()
-	if !s.isLeader {
-		s.isLeaderMutex.Unlock()
-		return -1, ERR_NOT_LEADER
-	}
-	s.isLeaderMutex.Unlock()
+	//s.isLeaderMutex.Lock()
+	//if !s.isLeader {
+	//	s.isLeaderMutex.Unlock()
+	//	return -1, ERR_NOT_LEADER
+	//}
+	//s.isLeaderMutex.Unlock()
 
 	for idx, addr := range s.ipList {
 		if int64(idx) == s.serverId {
@@ -538,7 +538,7 @@ func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty
 
 		isCrash, err := client.IsCrashed(ctx, &emptypb.Empty{})
 
-		//fmt.Println("--Back to SendHeartBeat--  AppendEntries output: ", output, " s term: ", s.term)
+		fmt.Printf("--count follower is crash-- %v %v", idx, isCrash)
 		if !isCrash.IsCrashed {
 			count++
 		}
