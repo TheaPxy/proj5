@@ -34,6 +34,9 @@ type RaftSurfstore struct {
 	isLeaderMutex sync.RWMutex
 	isLeaderCond  *sync.Cond
 
+	commitIndexMutex sync.RWMutex
+	commitIndexCond  *sync.Cond
+
 	nextIndexMapMutex sync.RWMutex
 	nextIndexMapCond  *sync.Cond
 
@@ -192,7 +195,9 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 			// majority of nodes are alive
 			// change leader's commit index
 			//todo how much commitIndex incre?
+			s.commitIndexMutex.Lock()
 			s.commitIndex++
+			s.commitIndexMutex.Unlock()
 			break
 		}
 	}
@@ -322,18 +327,22 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 
 	// todo: what if len(input.entries) == 0
 	// rule 5
+	s.commitIndexMutex.Lock()
 	fmt.Println("  325 s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " leader.commitIndex ", input.LeaderCommit, " s.log ", s.log)
 	if input.LeaderCommit > s.commitIndex {
 		//todo last append new entry?
 		s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
 	}
+	s.commitIndexMutex.Unlock()
 
+	s.commitIndexMutex.Lock()
 	for s.lastApplied < s.commitIndex {
 		s.lastApplied++
 		fmt.Println("  s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " s.log ", s.log)
 		entry := s.log[s.lastApplied]
 		s.metaStore.UpdateFile(ctx, entry.FileMetaData)
 	}
+	s.commitIndexMutex.Unlock()
 	fmt.Println("  Append Success", s.ip, " log ", s.log)
 	output.Success = true
 	return output, nil
@@ -352,7 +361,9 @@ func (s *RaftSurfstore) SetLeader(ctx context.Context, _ *emptypb.Empty) (*Succe
 	// set all nextIndex = num of logs+1
 	s.nextIndexMapMutex.Lock()
 	for i, _ := range s.nextIndex {
+		s.commitIndexMutex.Lock()
 		s.nextIndex[i] = s.commitIndex + 1
+		s.commitIndexMutex.Unlock()
 	}
 	s.nextIndexMapMutex.Unlock()
 
