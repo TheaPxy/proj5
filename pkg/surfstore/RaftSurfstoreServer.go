@@ -166,6 +166,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		fmt.Println("--UpdateFile--")
 		fmt.Println("  Leader's Log:  ", s.ip, " ", s.log)
 		fmt.Println("  NextIndex ", s.nextIndex)
+		//fmt.Println("  CommitIndex ", s.commitIndex)
 		s.nextIndexMapMutex.Lock()
 		if s.nextIndex[addr] >= 1 {
 			input.PrevLogTerm = s.log[s.nextIndex[addr]-1].Term
@@ -173,8 +174,6 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		}
 		if s.nextIndex[addr] < int64(len(s.log)) {
 			input.Entries = []*UpdateOperation{s.log[s.nextIndex[addr]]}
-		} else {
-			fmt.Println("?????????????????")
 		}
 		s.nextIndexMapMutex.Unlock()
 		fmt.Println("  Input ", input)
@@ -193,7 +192,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 			s.commitIndexMutex.Lock()
 			s.commitIndex++
 			s.commitIndexMutex.Unlock()
-			fmt.Println("  commitIndex ++ ")
+			fmt.Println("  Server ", s.serverId, " CommitIndex ", s.commitIndex)
 			break
 		}
 	}
@@ -526,7 +525,7 @@ func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty
 		if int64(idx) == s.serverId {
 			continue
 		}
-		fmt.Println("--CountFollowers-- leader Id: Receiver Id: term: ", s.ip, addr, s.term)
+		//fmt.Println("--CountFollowers-- leader Id: Receiver Id: term: ", s.ip, addr, s.term)
 		conn, err := grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
 			continue
