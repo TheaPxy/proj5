@@ -2,7 +2,6 @@ package surfstore
 
 import (
 	context "context"
-	"errors"
 	"fmt"
 	"google.golang.org/grpc"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -72,21 +71,20 @@ func (s *RaftSurfstore) GetFileInfoMap(ctx context.Context, empty *emptypb.Empty
 	//	return nil, ERR_NOT_LEADER
 	//}
 	//s.isCrashedMutex.Unlock()
-	//for {
-	count, err := s.CountFollowers(ctx, empty)
-	if err != nil {
-		return nil, err
-	}
-	if count > len(s.ipList)/2 {
-		fileInfoMap, err := s.metaStore.GetFileInfoMap(ctx, empty)
+	for {
+		count, err := s.CountFollowers(ctx, empty)
 		if err != nil {
 			return nil, err
 		}
-		return fileInfoMap, nil
-	} else {
-		return nil, errors.New("Majority Server Down")
+		if count > len(s.ipList)/2 {
+			break
+		}
 	}
-	//}
+	fileInfoMap, e := s.metaStore.GetFileInfoMap(ctx, empty)
+	if e != nil {
+		return nil, e
+	}
+	return fileInfoMap, nil
 
 }
 
@@ -109,33 +107,33 @@ func (s *RaftSurfstore) GetBlockStoreAddr(ctx context.Context, empty *emptypb.Em
 
 	// majority of nodes are not working, block
 
-	//for {
-	//	count, err := s.CountFollowers(ctx, empty)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	if count > len(s.ipList)/2 {
-	//		break
-	//	}
-	//}
-	//addr, err := s.metaStore.GetBlockStoreAddr(ctx, empty)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return addr, nil
-	count, err := s.CountFollowers(ctx, empty)
-	if err != nil {
-		return nil, err
-	}
-	if count > len(s.ipList)/2 {
-		addr, err := s.metaStore.GetBlockStoreAddr(ctx, empty)
+	for {
+		count, err := s.CountFollowers(ctx, empty)
 		if err != nil {
 			return nil, err
 		}
-		return addr, nil
-	} else {
-		return nil, errors.New("Majority Server Down")
+		if count > len(s.ipList)/2 {
+			break
+		}
 	}
+	addr, err := s.metaStore.GetBlockStoreAddr(ctx, empty)
+	if err != nil {
+		return nil, err
+	}
+	return addr, nil
+	//count, err := s.CountFollowers(ctx, empty)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if count > len(s.ipList)/2 {
+	//	addr, err := s.metaStore.GetBlockStoreAddr(ctx, empty)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	return addr, nil
+	//} else {
+	//	return nil, errors.New("Majority Server Down")
+	//}
 
 }
 
@@ -555,7 +553,7 @@ func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty
 
 		isCrash, err := client.IsCrashed(ctx, &emptypb.Empty{})
 
-		fmt.Printf("--count follower is crash-- %v %v \n", idx, isCrash)
+		//fmt.Printf("--count follower is crash-- %v %v \n", idx, isCrash)
 		if err != nil || isCrash == nil {
 			return -1, err
 		}

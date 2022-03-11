@@ -2,7 +2,6 @@ package surfstore
 
 import (
 	context "context"
-	"fmt"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"time"
@@ -25,7 +24,7 @@ func (surfClient *RPCClient) GetBlock(blockHash string, blockStoreAddr string, b
 	c := NewBlockStoreClient(conn)
 
 	// perform the call
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	b, err := c.GetBlock(ctx, &BlockHash{Hash: blockHash})
 	if err != nil {
@@ -49,7 +48,7 @@ func (surfClient *RPCClient) PutBlock(block *Block, blockStoreAddr string, succ 
 	c := NewBlockStoreClient(conn)
 
 	// perform the call
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	success, err := c.PutBlock(ctx, block) // write the block from client to the server
 
@@ -74,7 +73,7 @@ func (surfClient *RPCClient) HasBlocks(blockHashesIn []string, blockStoreAddr st
 	c := NewBlockStoreClient(conn)
 
 	// perform the call
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	inHashes := &BlockHashes{
 		Hashes: blockHashesIn,
@@ -98,18 +97,18 @@ func (surfClient *RPCClient) GetFileInfoMap(serverFileInfoMap *map[string]*FileM
 		}
 		c := NewRaftSurfstoreClient(conn)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		// remoteIndex : FileInfoMap
 		//remoteIndex := *FileInfoMap{}
 		remoteIndex, e := c.GetFileInfoMap(ctx, &emptypb.Empty{})
 		if e != nil {
 
-			fmt.Println("---------Error: err_server_crash 1----------", e, e.Error() == "Majority Server Down")
-			if e.Error() == "Majority Server Down" {
-				fmt.Println("---------Error: err_server_crash 1.1----------")
-				return e
-			}
+			//fmt.Println("---------Error: err_server_crash 1----------", e, e.Error() == "Majority Server Down")
+			//if e.Error() == "Majority Server Down" {
+			//	fmt.Println("---------Error: err_server_crash 1.1----------")
+			//	return e
+			//}
 			continue //
 		}
 		*serverFileInfoMap = (*remoteIndex).FileInfoMap
@@ -131,7 +130,7 @@ func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersio
 		}
 		c := NewRaftSurfstoreClient(conn)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
 		fileMetaData.Version = *latestVersion
@@ -139,11 +138,11 @@ func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersio
 		_, e := c.UpdateFile(ctx, fileMetaData)
 
 		if e != nil {
-			fmt.Println("---------Error: err_server_crash 2----------", e)
-			if e.Error() == "Majority Server Down" {
-				fmt.Println("---------Error: err_server_crash 2.1----------")
-				return e
-			}
+			//fmt.Println("---------Error: err_server_crash 2----------", e)
+			//if e.Error() == "Majority Server Down" {
+			//	fmt.Println("---------Error: err_server_crash 2.1----------")
+			//	return e
+			//}
 			continue
 			//return err
 		}
@@ -164,16 +163,16 @@ func (surfClient *RPCClient) GetBlockStoreAddr(blockStoreAddr *string) error {
 		c := NewRaftSurfstoreClient(conn)
 
 		// perform the call
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		addr, e := c.GetBlockStoreAddr(ctx, &emptypb.Empty{}) // addr: message type struct
 		if e != nil {
 			//conn.Close()
-			fmt.Println("---------Error: err_server_crash 3----------", e)
-			if e.Error() == "Majority Server Down" {
-				fmt.Println("---------Error: err_server_crash 3.1----------")
-				return e
-			}
+			////fmt.Println("---------Error: err_server_crash 3----------", e)
+			////if e.Error() == "Majority Server Down" {
+			////	fmt.Println("---------Error: err_server_crash 3.1----------")
+			////	return e
+			////}
 			continue
 			//return err
 		}
