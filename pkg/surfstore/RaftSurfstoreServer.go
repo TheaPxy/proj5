@@ -234,10 +234,9 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *
 		if output.Success {
 			// todo update nextIndex for followers ???????????
 			// rule 4, rule 5
-			// s.term = output.Term
-			//s.nextIndexMapMutex.Lock()
-			s.nextIndex[addr]++
-			//s.nextIndexMapMutex.Unlock()
+			if len(input.Entries) != 0 {
+				s.nextIndex[addr]++
+			}
 			ok <- true
 			return
 		} else {
@@ -330,8 +329,8 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 		s.commitIndex = int64(math.Min(float64(input.LeaderCommit), float64(len(s.log)-1)))
 	}
 
-	if s.lastApplied < s.commitIndex {
-		s.lastApplied = s.commitIndex
+	for s.lastApplied < s.commitIndex {
+		s.lastApplied++
 		fmt.Println("  s.commitIndex ", s.commitIndex, " s.lastApplied ", s.lastApplied, " s.log ", s.log)
 		entry := s.log[s.lastApplied]
 		s.metaStore.UpdateFile(ctx, entry.FileMetaData)
@@ -417,19 +416,46 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
 
-		//fmt.Println("--Back to SendHeartBeat--  AppendEntries output: ", output, " s term: ", s.term)
-		if output != nil && !output.Success && output.Term > s.term {
-			s.isLeaderMutex.Lock()
-			s.isLeader = false
-			s.isLeaderMutex.Unlock()
-			return nil, nil
+		if err != nil {
+			//fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
+			continue
 		}
-		if output != nil && output.Success {
-			s.nextIndex[addr] += int64(len(input.Entries))
+		if output.Success {
+			// todo update nextIndex for followers ???????????
+			// rule 4, rule 5
+			if len(input.Entries) != 0 {
+				s.nextIndex[addr]++
+			}
+		} else {
+			// failed cases, desc nextIndex based on output
+			// violate rule 1:
+			fmt.Println("--AppendFollowerEntry--", s.ip, " output fail")
+			if output.Term > s.term {
+				s.isLeaderMutex.Lock()
+				s.isLeader = false
+				s.isLeaderMutex.Unlock()
+				s.term = output.Term
+
+			} else {
+				// violate rule 2|| violate rule 3
+				//s.nextIndexMapMutex.Lock()
+				s.nextIndex[addr]--
+				fmt.Println("--AppendFollowerEntry-- violate rule 2,3 addr: ", addr, " nextIndex: ", s.nextIndex[addr])
+				//s.nextIndexMapMutex.Unlock()
+			}
 		}
 
 	}
-
+	for idx, addr := range s.ipList {
+		conn, err := grpc.Dial(addr, grpc.WithInsecure())
+		if err != nil {
+			return nil, nil
+		}
+		client := NewRaftSurfstoreClient(conn)
+		internalState, err := client.GetInternalState(ctx, &emptypb.Empty{})
+		isCrash, err := client.IsCrashed(ctx, &emptypb.Empty{})
+		fmt.Println("idx ", idx, internalState, isCrash.IsCrashed)
+	}
 	return &Success{Flag: true}, nil
 
 }
