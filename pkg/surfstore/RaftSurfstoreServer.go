@@ -218,6 +218,14 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 			// majority of nodes are alive
 			// change leader's commit index
 			//todo how much commitIndex incre?
+
+			s.isCrashedMutex.Lock()
+			if s.isCrashed {
+				s.isCrashedMutex.Unlock()
+				return nil, ERR_SERVER_CRASHED
+			}
+			s.isCrashedMutex.Unlock()
+
 			s.commitIndexMutex.Lock()
 			s.commitIndex++
 			s.commitIndexMutex.Unlock()
@@ -231,15 +239,6 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *AppendEntryInput) {
 	// should similar to commitEntry
 	for {
-
-		//mutex here
-		s.isCrashedMutex.Lock()
-		if s.isCrashed {
-			s.isCrashedMutex.Unlock()
-			return
-		}
-		s.isCrashedMutex.Unlock()
-
 		addr := s.ipList[serverIdx]
 		conn, err := grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
@@ -254,19 +253,21 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *
 		output, err := client.AppendEntries(ctx, input)
 		//internalState, err := s.GetInternalState(ctx, &emptypb.Empty{})
 		//fmt.Println(internalState)
+
+		// rule 4, rule 5
+		s.isCrashedMutex.Lock()
+		if s.isCrashed {
+			s.isCrashedMutex.Unlock()
+			ok <- false
+			return
+		}
+		s.isCrashedMutex.Unlock()
+
 		if err != nil {
 			//fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
 			continue
 		}
 		if output.Success {
-			// rule 4, rule 5
-			s.isCrashedMutex.Lock()
-			if s.isCrashed {
-				s.isCrashedMutex.Unlock()
-				ok <- false
-				return
-			}
-			s.isCrashedMutex.Unlock()
 
 			if len(input.Entries) != 0 {
 				s.nextIndexMapMutex.Lock()
@@ -280,6 +281,7 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *
 			// failed cases, desc nextIndex based on output
 			// violate rule 1:
 			fmt.Printf("--AppendFollowerEntry-- %v output fail \n", s.serverId)
+
 			if output.Term > s.term {
 				s.isLeaderMutex.Lock()
 				s.isLeader = false
@@ -340,6 +342,7 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	// rule2 || rule3
 	// todo never entered
 	if len(s.log) <= int(input.PrevLogIndex) || (input.PrevLogIndex >= 0 && s.log[input.PrevLogIndex].Term != input.PrevLogTerm) {
+		fmt.Printf("-------------violate rule 2, 3: s.log: %v, input.PrevLogIndex: %v ", s.log, input.PrevLogTerm)
 		return output, nil
 	}
 
@@ -412,12 +415,6 @@ func (s *RaftSurfstore) SetLeader(ctx context.Context, _ *emptypb.Empty) (*Succe
 // Send a 'Heartbeat" (AppendEntries with no log entries) to the other servers
 // Only leaders send heartbeats, if the node is not the leader you can return Success = false
 func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*Success, error) {
-	s.isCrashedMutex.Lock()
-	if s.isCrashed {
-		s.isCrashedMutex.Unlock()
-		return nil, ERR_SERVER_CRASHED
-	}
-	s.isCrashedMutex.Unlock()
 
 	s.isLeaderMutex.Lock()
 	if !s.isLeader {
@@ -464,6 +461,13 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
+
+		s.isCrashedMutex.Lock()
+		if s.isCrashed {
+			s.isCrashedMutex.Unlock()
+			return nil, ERR_SERVER_CRASHED
+		}
+		s.isCrashedMutex.Unlock()
 
 		if err != nil {
 			//fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)

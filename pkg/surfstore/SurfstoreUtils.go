@@ -75,18 +75,12 @@ func ClientSync(client RPCClient) {
 				// upload tombstone version
 				// todo if trying to delete the deleted file
 
-				//if !(len(serverFileInfoMap[filename].BlockHashList) == 1 && serverFileInfoMap[filename].BlockHashList[0] == "0") {
-				//	// remote not deleted
-				//	if err = uploadTombstone(client, localVersion, filename, serverFileInfoMap, localIndexMetaMap); err != nil {
-				//		log.Fatalf("Upload Tombstone Failed: %s", err)
-				//	}
-				//}
-
-				// todo logic: no matter server delete or not, delete and update to sever
-				if err = uploadTombstone(client, localVersion, filename, serverFileInfoMap, localIndexMetaMap); err != nil {
-					log.Fatalf("Upload Tombstone Failed: %s", err)
+				if !(len(serverFileInfoMap[filename].BlockHashList) == 1 && serverFileInfoMap[filename].BlockHashList[0] == "0") {
+					// remote not deleted
+					if err = uploadTombstone(client, localVersion, filename, serverFileInfoMap, localIndexMetaMap); err != nil {
+						log.Fatalf("Upload Tombstone Failed: %s", err)
+					}
 				}
-				// todo if trying to create/modify the deleted file
 
 			}
 		} else if isOnBaseDir && !isOnLocalIndex {
