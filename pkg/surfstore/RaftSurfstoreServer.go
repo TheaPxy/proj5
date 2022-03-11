@@ -293,7 +293,11 @@ func (s *RaftSurfstore) AppendEntries(ctx context.Context, input *AppendEntryInp
 	output.Term = s.term
 	if len(s.log) > int(input.PrevLogIndex) {
 		//todo overwrite log
-		s.log = s.log[:input.PrevLogIndex+1]
+		if input.PrevLogIndex < 0 {
+			s.log = make([]*UpdateOperation, 0)
+		} else {
+			s.log = s.log[:input.PrevLogIndex+1]
+		}
 	}
 	// rule 4
 	s.log = append(s.log, input.Entries...)
