@@ -144,14 +144,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 	}
 	//todo find the right place to update s.log
 	s.log = append(s.log, &op)
-	//committed := make(chan bool)
-	//s.pendingCommits = append(s.pendingCommits, committed)
 
-	//go s.attemptCommit()
-	//success := <-committed
-	//if success {
-	//	return s.metaStore.UpdateFile(ctx, filemeta)
-	//}
 	ok := make(chan bool, len(s.ipList)-1)
 
 	for i, addr := range s.ipList {
@@ -170,7 +163,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		// if s.log is not empty
 		//s.nextIndexMapMutex.Lock()
 		//todo CorrectLog: check input.entries
-		fmt.Println("--AppendFollowerEntry--")
+		fmt.Println("--UpdateFile--")
 		fmt.Println("  Leader's Log:  ", s.ip, " ", s.log)
 		fmt.Println("  NextIndex ", s.nextIndex)
 		s.nextIndexMapMutex.Lock()
@@ -182,7 +175,7 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 			input.Entries = []*UpdateOperation{s.log[s.nextIndex[addr]]}
 		}
 		s.nextIndexMapMutex.Unlock()
-
+		fmt.Println("  Input ", input)
 		go s.AppendFollowerEntry(i, ok, input)
 	}
 	count := 1
@@ -228,13 +221,13 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		output, err := client.AppendEntries(ctx, input)
-		// todo: error location
+		//internalState, err := s.GetInternalState(ctx, &emptypb.Empty{})
+		//fmt.Println(internalState)
 		if err != nil {
 			//fmt.Println("--AppendFollowerEntry-- output: ", output, " error: ", err)
 			continue
 		}
 		if output.Success {
-			// todo update nextIndex for followers ???????????
 			// rule 4, rule 5
 			if len(input.Entries) != 0 {
 				s.nextIndexMapMutex.Lock()
