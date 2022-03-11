@@ -157,10 +157,8 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		}
 
 		input := &AppendEntryInput{
-			Term: s.term,
-			//PrevLogTerm: s.log[s.nextIndex[idx]-1].Term,
-			PrevLogTerm: 0,
-			//PrevLogIndex: s.nextIndex[idx] - 1,
+			Term:         s.term,
+			PrevLogTerm:  0,
 			PrevLogIndex: -1,
 			Entries:      make([]*UpdateOperation, 0),
 			LeaderCommit: s.commitIndex,
@@ -172,17 +170,16 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 		fmt.Println("--AppendFollowerEntry--")
 		fmt.Println("  Leader's Log:  ", s.ip, " ", s.log)
 		fmt.Println("  NextIndex ", s.nextIndex)
+		s.nextIndexMapMutex.Lock()
 		if s.nextIndex[addr] >= 1 {
 			input.PrevLogTerm = s.log[s.nextIndex[addr]-1].Term
 			input.PrevLogIndex = s.nextIndex[addr] - 1
-			//s.nextIndexMapMutex.Unlock()
 		}
 		if s.nextIndex[addr] < int64(len(s.log)) {
-			// todo
 			input.Entries = []*UpdateOperation{s.log[s.nextIndex[addr]]}
 		}
+		s.nextIndexMapMutex.Unlock()
 
-		//s.nextIndexMapMutex.Unlock()
 		go s.AppendFollowerEntry(i, ok, input)
 	}
 	count := 1
@@ -235,7 +232,9 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *
 			// todo update nextIndex for followers ???????????
 			// rule 4, rule 5
 			if len(input.Entries) != 0 {
+				s.nextIndexMapMutex.Lock()
 				s.nextIndex[addr]++
+				s.nextIndexMapMutex.Unlock()
 			}
 			ok <- true
 			return
@@ -252,10 +251,10 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *
 				return
 			} else {
 				// violate rule 2|| violate rule 3
-				//s.nextIndexMapMutex.Lock()
+				s.nextIndexMapMutex.Lock()
 				s.nextIndex[addr]--
 				fmt.Println("--AppendFollowerEntry-- violate rule 2,3 addr: ", addr, " nextIndex: ", s.nextIndex[addr])
-				//s.nextIndexMapMutex.Unlock()
+				s.nextIndexMapMutex.Unlock()
 			}
 		}
 
@@ -351,9 +350,12 @@ func (s *RaftSurfstore) SetLeader(ctx context.Context, _ *emptypb.Empty) (*Succe
 
 	s.term++
 	// set all nextIndex = num of logs+1
+	s.nextIndexMapMutex.Lock()
 	for i, _ := range s.nextIndex {
 		s.nextIndex[i] = s.commitIndex + 1
 	}
+	s.nextIndexMapMutex.Unlock()
+
 	s.isLeaderMutex.Lock()
 	s.isLeader = true
 	s.isLeaderMutex.Unlock()
@@ -397,7 +399,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			Entries:      make([]*UpdateOperation, 0),
 			LeaderCommit: s.commitIndex,
 		}
-
+		s.nextIndexMapMutex.Lock()
 		fmt.Println("  NextIndex ", s.nextIndex)
 		fmt.Println("  s log ", s.log)
 		// if s.log is not empty
@@ -409,6 +411,7 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			//input.Entries = s.log[s.nextIndex[addr]:]
 			input.Entries = []*UpdateOperation{s.log[s.nextIndex[addr]]}
 		}
+		s.nextIndexMapMutex.Unlock()
 
 		//fmt.Println("  Leader's Log ", s.ip, " ", s.log)
 		fmt.Println("  input.entry ", input.Entries)
@@ -424,7 +427,9 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 			// todo update nextIndex for followers ???????????
 			// rule 4, rule 5
 			if len(input.Entries) != 0 {
+				s.nextIndexMapMutex.Lock()
 				s.nextIndex[addr]++
+				s.nextIndexMapMutex.Unlock()
 			}
 		} else {
 			// failed cases, desc nextIndex based on output
@@ -438,10 +443,10 @@ func (s *RaftSurfstore) SendHeartbeat(ctx context.Context, _ *emptypb.Empty) (*S
 
 			} else {
 				// violate rule 2|| violate rule 3
-				//s.nextIndexMapMutex.Lock()
+				s.nextIndexMapMutex.Lock()
 				s.nextIndex[addr]--
 				fmt.Println("--AppendFollowerEntry-- violate rule 2,3 addr: ", addr, " nextIndex: ", s.nextIndex[addr])
-				//s.nextIndexMapMutex.Unlock()
+				s.nextIndexMapMutex.Unlock()
 			}
 		}
 
