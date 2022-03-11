@@ -538,7 +538,7 @@ func (s *RaftSurfstore) CountFollowers(ctx context.Context, empty *emptypb.Empty
 
 		isCrash, err := client.IsCrashed(ctx, &emptypb.Empty{})
 
-		fmt.Printf("--count follower is crash-- %v %v", idx, isCrash)
+		fmt.Printf("--count follower is crash-- %v %v \n", idx, isCrash)
 		if !isCrash.IsCrashed {
 			count++
 		}
