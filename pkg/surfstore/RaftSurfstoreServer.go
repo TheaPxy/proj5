@@ -195,6 +195,20 @@ func (s *RaftSurfstore) UpdateFile(ctx context.Context, filemeta *FileMetaData) 
 	}
 	count := 1
 	for {
+		s.isCrashedMutex.Lock()
+		if s.isCrashed {
+			s.isCrashedMutex.Unlock()
+			return nil, ERR_SERVER_CRASHED
+		}
+		s.isCrashedMutex.Unlock()
+
+		s.isLeaderMutex.Lock()
+		if !s.isLeader {
+			s.isLeaderMutex.Unlock()
+			return nil, ERR_NOT_LEADER
+		}
+		s.isLeaderMutex.Unlock()
+
 		succ := <-ok
 		if succ {
 			fmt.Println("-----------succ count", count)
@@ -246,6 +260,14 @@ func (s *RaftSurfstore) AppendFollowerEntry(serverIdx int, ok chan bool, input *
 		}
 		if output.Success {
 			// rule 4, rule 5
+			s.isCrashedMutex.Lock()
+			if s.isCrashed {
+				s.isCrashedMutex.Unlock()
+				ok <- false
+				return
+			}
+			s.isCrashedMutex.Unlock()
+
 			if len(input.Entries) != 0 {
 				s.nextIndexMapMutex.Lock()
 				s.nextIndex[addr]++
