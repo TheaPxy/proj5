@@ -40,59 +40,12 @@ func ClientSync(client RPCClient) {
 	}
 	//fmt.Println("Server Index Map ", client.BaseDir)
 	//PrintMetaMap(serverFileInfoMap)
-
-	for filename := range serverFileInfoMap {
-		localIndexMetaData, isOnLocalIndex := localIndexMetaMap[filename]
-		baseDirMetaData, isOnBaseDir := baseDirFileInfoMap[filename]
-		//isModified := modifiedFileMap[filename]
-		isModified := false
-		if !reflect.DeepEqual(localIndexMetaData.GetBlockHashList(), baseDirMetaData.GetBlockHashList()) {
-			isModified = true
-		}
-		localVersion := localIndexMetaData.GetVersion()
-		serverVersion := serverFileInfoMap[filename].GetVersion()
-		log.Println(filename, " isOnlocal: ", isOnLocalIndex, "inOnBaseDir: ", isOnBaseDir, "isModified", isModified)
-
-		if !isOnBaseDir && !isOnLocalIndex {
-			if err = download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
-				log.Fatalf("Download %v failed: %s", filename, err)
-			}
-			log.Println("After download localIndexMetaMap ", client.BaseDir)
-			PrintMetaMap(localIndexMetaMap)
-		} else if isOnLocalIndex && isOnBaseDir {
-			if serverVersion > localVersion {
-				if err = download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
-					log.Fatalf("Download %v failed: %s", filename, err)
-				}
-			}
-		} else if isOnLocalIndex && !isOnBaseDir {
-			if serverVersion > localVersion {
-				if err = download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
-					log.Fatalf("Download %v failed: %s", filename, err)
-				}
-			} else if serverVersion == localVersion {
-				// file delete locally, server no newer version
-				// upload tombstone version
-				// todo if trying to delete the deleted file
-
-				if !(len(serverFileInfoMap[filename].BlockHashList) == 1 && serverFileInfoMap[filename].BlockHashList[0] == "0") {
-					// remote not deleted
-					if err = uploadTombstone(client, localVersion, filename, serverFileInfoMap, localIndexMetaMap); err != nil {
-						log.Fatalf("Upload Tombstone Failed: %s", err)
-					}
-				}
-
-			}
-		} else if isOnBaseDir && !isOnLocalIndex {
-			if err = download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
-				log.Fatalf("Download %v failed: %s", filename, err)
-			}
-		}
-	}
-
 	for filename := range baseDirFileInfoMap {
+		if filename == "index.txt" {
+			continue
+		}
 		localIndexMetaData, isOnLocalIndex := localIndexMetaMap[filename]
-		serverMetaData, isOnServer := serverFileInfoMap[filename]
+		_, isOnServer := serverFileInfoMap[filename]
 		//isModified := modifiedFileMap[filename]
 		isModified := false
 		if !reflect.DeepEqual(localIndexMetaData.GetBlockHashList(), baseDirFileInfoMap[filename].GetBlockHashList()) {
@@ -117,43 +70,115 @@ func ClientSync(client RPCClient) {
 				}
 				//}
 			}
-		} else if isOnServer && isOnLocalIndex {
-			//fmt.Println("isModified: ", isModified)
-			serverVersion := serverMetaData.GetVersion()
-			localVersion := localIndexMetaData.GetVersion()
+		}
+		//else if isOnServer && isOnLocalIndex {
+		//	//fmt.Println("isModified: ", isModified)
+		//	serverVersion := serverMetaData.GetVersion()
+		//	localVersion := localIndexMetaData.GetVersion()
+		//	if isModified {
+		//		// locally modified the file
+		//		log.Println(filename, " serverVersion, localVersion: ", serverVersion, localVersion)
+		//		if serverVersion == localVersion {
+		//			// case 2:
+		//			// locally modified the file no remote changes
+		//			if err1 := upload(client, localVersion, filename, baseDirFileInfoMap, baseDirFileBlockMap, localIndexMetaMap); err1 != nil {
+		//				//var VersionErr = errors.New("wrong version metastore")
+		//				//if errors.Is(err1, VersionErr) {
+		//				//	if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
+		//				//		log.Fatalf("Download %v failed: %s", filename, e)
+		//				//	}
+		//				//} else {
+		//				//	log.Fatalf("Upload failed: %s", err1)
+		//				//}
+		//				if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
+		//					log.Fatalf("Download %v failed: %s", filename, e)
+		//				}
+		//			}
+
+		//		}
+
+		//	}
+
+		//	// server version > local version
+		//	// download or delete
+		//	// todo: delete
+		//	if serverVersion > localVersion {
+		//		// case 3
+		//		// download from server
+		//		if err := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
+		//			log.Fatalf("Download %v failed: %s", filename, err)
+		//		}
+		//	}
+		//
+	}
+
+	for filename := range serverFileInfoMap {
+		if filename == "index.txt" {
+			continue
+		}
+		localIndexMetaData, isOnLocalIndex := localIndexMetaMap[filename]
+		baseDirMetaData, isOnBaseDir := baseDirFileInfoMap[filename]
+		//isModified := modifiedFileMap[filename]
+		isModified := false
+		if !reflect.DeepEqual(localIndexMetaData.GetBlockHashList(), baseDirMetaData.GetBlockHashList()) {
+			isModified = true
+		}
+		localVersion := localIndexMetaData.GetVersion()
+		serverVersion := serverFileInfoMap[filename].GetVersion()
+		log.Println(filename, " isOnlocal: ", isOnLocalIndex, "inOnBaseDir: ", isOnBaseDir, "isModified", isModified)
+
+		if !isOnBaseDir && !isOnLocalIndex {
+			if err = download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
+				log.Fatalf("Download %v failed: %s", filename, err)
+			}
+			log.Println("After download localIndexMetaMap ", client.BaseDir)
+			//PrintMetaMap(localIndexMetaMap)
+		} else if isOnLocalIndex && isOnBaseDir {
 			if isModified {
-				// locally modified the file
-				log.Println(filename, " serverVersion, localVersion: ", serverVersion, localVersion)
-				if serverVersion == localVersion {
-					// case 2:
-					// locally modified the file no remote changes
-					if err1 := upload(client, localVersion, filename, baseDirFileInfoMap, baseDirFileBlockMap, localIndexMetaMap); err1 != nil {
-						//var VersionErr = errors.New("wrong version metastore")
-						//if errors.Is(err1, VersionErr) {
-						//	if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
-						//		log.Fatalf("Download %v failed: %s", filename, e)
-						//	}
-						//} else {
-						//	log.Fatalf("Upload failed: %s", err1)
-						//}
+				if serverVersion > localVersion {
+					if err = download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
+						log.Fatalf("Download %v failed: %s", filename, err)
+					}
+				} else {
+					//todo upload, version++
+					if err1 := upload(client, serverVersion, filename, baseDirFileInfoMap, baseDirFileBlockMap, localIndexMetaMap); err1 != nil {
 						if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
 							log.Fatalf("Download %v failed: %s", filename, e)
 						}
 					}
+				}
+			} else {
+				if serverVersion > localVersion {
+					if err = download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
+						log.Fatalf("Download %v failed: %s", filename, err)
+					}
+				}
+			}
 
+		} else if isOnLocalIndex && !isOnBaseDir {
+			if serverVersion > localVersion {
+				if err = download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
+					log.Fatalf("Download %v failed: %s", filename, err)
+				}
+			} else if serverVersion == localVersion {
+				// file delete locally, server no newer version
+
+				// todo if trying to delete the deleted file
+
+				if !(len(serverFileInfoMap[filename].BlockHashList) == 1 && serverFileInfoMap[filename].BlockHashList[0] == "0") {
+					// remote not deleted
+					if err = uploadTombstone(client, localVersion, filename, serverFileInfoMap, localIndexMetaMap); err != nil {
+						//log.Fatalf("Upload Tombstone Failed: %s", err)
+						if e := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); e != nil {
+							log.Fatalf("Download %v failed: %s", filename, e)
+						}
+					}
 				}
 
 			}
-
-			// server version > local version
-			// download or delete
-			// todo: delete
-			if serverVersion > localVersion {
-				// case 3
-				// download from server
-				if err := download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
-					log.Fatalf("Download %v failed: %s", filename, err)
-				}
+		} else if isOnBaseDir && !isOnLocalIndex {
+			if err = download(client, filename, serverFileInfoMap, localIndexMetaMap, baseDirFileInfoMap); err != nil {
+				log.Fatalf("Download %v failed: %s", filename, err)
 			}
 		}
 	}
